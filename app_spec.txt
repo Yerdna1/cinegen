@@ -1,0 +1,557 @@
+<project_specification>
+  <project_name>CineGen</project_name>
+
+  <overview>
+    CineGen is a SaaS platform for creating long-form AI-generated videos with consistent characters, scenes, and dialogue. Users bring their own API keys for AI services (Hailuo/Kling for video, NanoBanana for images, 11Labs for audio) and use a guided wizard to define their video project. The system automatically generates scene breakdowns, images, video clips, and audio dialogue, stitching everything into cohesive long-form videos.
+  </overview>
+
+  <technology_stack>
+    <frontend>
+      <framework>React</framework>
+      <styling>Tailwind CSS</styling>
+      <state_management>React Context + hooks</state_management>
+      <routing>React Router</routing>
+    </frontend>
+    <backend>
+      <runtime>Node.js with Express</runtime>
+      <database>PostgreSQL</database>
+      <orm>Prisma</orm>
+      <authentication>JWT with email/password</authentication>
+    </backend>
+    <communication>
+      <api>REST API</api>
+      <realtime>WebSocket for generation progress</realtime>
+    </communication>
+    <external_apis>
+      <video_generation>Hailuo 2.3 / Kling 2.6 (user's API key)</video_generation>
+      <image_generation>NanoBanana Pro / Hailuo (user's API key)</image_generation>
+      <audio_generation>11Labs (user's API key)</audio_generation>
+      <ai_scene_generation>OpenAI or Anthropic for scene/dialogue generation</ai_scene_generation>
+    </external_apis>
+  </technology_stack>
+
+  <prerequisites>
+    <environment_setup>
+      - Node.js 18+
+      - PostgreSQL 14+
+      - npm or yarn
+      - User must have API keys for: Hailuo/Kling, NanoBanana, 11Labs
+    </environment_setup>
+  </prerequisites>
+
+  <feature_count>95</feature_count>
+
+  <security_and_access_control>
+    <user_roles>
+      <role name="user">
+        <permissions>
+          - Can create/manage own character profiles
+          - Can create/manage own video projects
+          - Can configure own API keys
+          - Can view/download own generated content
+          - Cannot access other users' data
+          - Cannot access admin dashboard
+        </permissions>
+        <protected_routes>
+          - /dashboard (authenticated users)
+          - /projects/* (authenticated users, own projects only)
+          - /characters/* (authenticated users, own characters only)
+          - /settings (authenticated users)
+        </protected_routes>
+      </role>
+      <role name="admin">
+        <permissions>
+          - All user permissions
+          - Can view all users list
+          - Can view usage statistics
+          - Can view user details
+        </permissions>
+        <protected_routes>
+          - /admin/* (admin only)
+        </protected_routes>
+      </role>
+    </user_roles>
+    <authentication>
+      <method>email/password with email verification</method>
+      <session_timeout>7 days</session_timeout>
+      <password_requirements>Minimum 8 characters, at least one number and one letter</password_requirements>
+    </authentication>
+    <sensitive_operations>
+      - Delete account requires password confirmation
+      - API keys are encrypted at rest
+      - API keys displayed masked after saving
+    </sensitive_operations>
+  </security_and_access_control>
+
+  <core_features>
+    <authentication>
+      - User registration with email/password
+      - Email verification via link
+      - User login/logout
+      - Password reset via email
+      - Session persistence
+    </authentication>
+
+    <user_profile_and_settings>
+      - View/edit profile
+      - Configure Hailuo/Kling API key
+      - Configure NanoBanana API key
+      - Configure 11Labs API key
+      - API keys stored encrypted, displayed masked
+    </user_profile_and_settings>
+
+    <character_profiles>
+      - Create character profile with name and description
+      - Upload character reference image (up to 6 main actors)
+      - Edit character profile
+      - Delete character profile
+      - List all saved character profiles
+      - Reuse characters across multiple projects
+    </character_profiles>
+
+    <project_management>
+      - View list of all projects
+      - Create new project (starts wizard)
+      - Open/resume existing project
+      - Delete project
+      - Project status display (draft, generating, complete, failed)
+      - Save project progress automatically
+    </project_management>
+
+    <project_wizard>
+      <step_1_duration>
+        - Input total video duration (in seconds or minutes)
+        - System calculates number of clips needed (duration / 6 seconds)
+        - System picks optimal resolution
+      </step_1_duration>
+      <step_2_genre>
+        - Select genre from list: Action, Drama, Comedy, Horror, Sci-Fi, Romance, Thriller, Documentary
+      </step_2_genre>
+      <step_3_setting>
+        - Text input for time period and location description
+      </step_3_setting>
+      <step_4_characters>
+        - Select from saved character profiles
+        - Upload new character inline
+        - Assign role/description for each character in this project
+        - Up to 6 main characters per project
+      </step_4_characters>
+      <step_5_plot>
+        - Text input for plot/story description
+        - User describes the narrative in their own words
+      </step_5_plot>
+      <step_6_voices>
+        - Assign 11Labs voice to each character
+        - Voice selection from available 11Labs voices
+        - Preview voice sample (if available)
+      </step_6_voices>
+      <step_7_review>
+        - AI generates complete scene breakdown
+        - Display scenes with: dialogue, camera angles, emotions, actions
+        - Each scene maps to a 6-second clip
+        - User can edit scene content
+        - User can add new scenes
+        - User can delete scenes
+        - User can reorder scenes
+      </step_7_review>
+      <step_8_generate>
+        - Start generation button
+        - Confirmation before starting
+      </step_8_generate>
+    </project_wizard>
+
+    <ai_scene_generation>
+      - Generate complete scene breakdown from wizard inputs
+      - Generate natural dialogue for each character
+      - Generate camera angles (wide, medium, close-up, etc.)
+      - Generate emotions and actions for characters
+      - Break story into 6-second clip segments
+      - Maintain narrative consistency across all scenes
+      - Support for up to 100+ scenes (for 600+ second videos)
+    </ai_scene_generation>
+
+    <image_generation>
+      - Generate start image for each clip
+      - Generate end image for each clip
+      - Maintain character consistency using reference images
+      - Maintain scene/setting consistency
+      - Use NanoBanana Pro or Hailuo API (user's key)
+      - Handle generation errors gracefully
+    </image_generation>
+
+    <video_generation>
+      - Generate 6-second video clip from start/end image pairs
+      - Use Hailuo 2.3 or Kling 2.6 API (user's key)
+      - Process clips sequentially or in batches
+      - Store generated clips
+      - Handle generation errors gracefully
+    </video_generation>
+
+    <audio_generation>
+      - Generate dialogue audio for each scene
+      - Use correct 11Labs voice per character
+      - Sync audio timing with video clips
+      - Handle generation errors gracefully
+    </audio_generation>
+
+    <generation_progress>
+      - Real-time progress display on page
+      - Show current stage (images, video, audio)
+      - Show progress percentage
+      - Show current clip being generated
+      - WebSocket for live updates
+      - Handle errors and display error messages
+      - Allow user to stay on page and watch progress
+    </generation_progress>
+
+    <clip_review_and_regeneration>
+      - View all generated clips in grid/list
+      - Play individual clip with audio
+      - Regenerate specific clip (image + video + audio)
+      - Preview regenerated clip before confirming
+      - Replace clip with regenerated version
+    </clip_review_and_regeneration>
+
+    <export>
+      - Download individual clips as MP4
+      - Download combined full video as MP4
+      - Download progress indicator
+      - Stitch all clips with audio into final video
+    </export>
+
+    <admin_dashboard>
+      - View list of all users
+      - View total user count
+      - View usage statistics (projects created, videos generated)
+      - View individual user details
+      - Admin role protection
+    </admin_dashboard>
+
+    <ui_and_ux>
+      - Dashboard showing recent projects
+      - Navigation sidebar
+      - Responsive design (desktop-first, but mobile-friendly)
+      - Loading states for all async operations
+      - Error states with clear messages
+      - Empty states when no data
+      - Clean, modern interface
+    </ui_and_ux>
+
+    <background_music_prepared>
+      - Database schema ready for background music tracks
+      - UI placeholder for music selection (disabled for now)
+      - System architecture supports adding music layer later
+    </background_music_prepared>
+  </core_features>
+
+  <database_schema>
+    <tables>
+      <users>
+        - id, email, password_hash, email_verified, role
+        - created_at, updated_at
+      </users>
+      <api_keys>
+        - id, user_id, provider (hailuo/kling/nanobanana/11labs)
+        - encrypted_key, created_at, updated_at
+      </api_keys>
+      <characters>
+        - id, user_id, name, description, image_url
+        - created_at, updated_at
+      </characters>
+      <projects>
+        - id, user_id, name, status (draft/generating/complete/failed)
+        - duration_seconds, genre, setting, plot
+        - created_at, updated_at
+      </projects>
+      <project_characters>
+        - id, project_id, character_id, role_description, voice_id
+      </project_characters>
+      <scenes>
+        - id, project_id, sequence_number
+        - dialogue, camera_angle, emotions, actions
+        - start_image_url, end_image_url, video_url, audio_url
+        - status (pending/generating/complete/failed)
+        - created_at, updated_at
+      </scenes>
+      <generation_jobs>
+        - id, project_id, job_type (image/video/audio/combine)
+        - status, progress_percent, error_message
+        - started_at, completed_at
+      </generation_jobs>
+      <background_music>
+        - id, name, url, duration_seconds
+        - (prepared for future use)
+      </background_music>
+    </tables>
+  </database_schema>
+
+  <api_endpoints_summary>
+    <auth>
+      - POST /api/auth/register
+      - POST /api/auth/login
+      - POST /api/auth/logout
+      - POST /api/auth/verify-email
+      - POST /api/auth/forgot-password
+      - POST /api/auth/reset-password
+      - GET /api/auth/me
+    </auth>
+    <users>
+      - GET /api/users/profile
+      - PUT /api/users/profile
+      - GET /api/users/api-keys
+      - PUT /api/users/api-keys
+    </users>
+    <characters>
+      - GET /api/characters
+      - POST /api/characters
+      - GET /api/characters/:id
+      - PUT /api/characters/:id
+      - DELETE /api/characters/:id
+      - POST /api/characters/:id/upload-image
+    </characters>
+    <projects>
+      - GET /api/projects
+      - POST /api/projects
+      - GET /api/projects/:id
+      - PUT /api/projects/:id
+      - DELETE /api/projects/:id
+      - POST /api/projects/:id/generate-scenes
+      - POST /api/projects/:id/start-generation
+      - GET /api/projects/:id/progress
+      - POST /api/projects/:id/scenes/:sceneId/regenerate
+    </projects>
+    <scenes>
+      - GET /api/projects/:id/scenes
+      - PUT /api/projects/:id/scenes/:sceneId
+      - POST /api/projects/:id/scenes
+      - DELETE /api/projects/:id/scenes/:sceneId
+      - PUT /api/projects/:id/scenes/reorder
+    </scenes>
+    <export>
+      - GET /api/projects/:id/clips/:clipId/download
+      - GET /api/projects/:id/download
+    </export>
+    <voices>
+      - GET /api/voices (fetch available 11Labs voices using user's key)
+    </voices>
+    <admin>
+      - GET /api/admin/users
+      - GET /api/admin/users/:id
+      - GET /api/admin/stats
+    </admin>
+    <websocket>
+      - WS /ws/generation/:projectId (real-time progress updates)
+    </websocket>
+  </api_endpoints_summary>
+
+  <ui_layout>
+    <main_structure>
+      - Left sidebar navigation (collapsible)
+      - Main content area
+      - Top header with user menu
+    </main_structure>
+    <pages>
+      - Login / Register / Forgot Password
+      - Dashboard (recent projects, quick stats)
+      - Projects List
+      - Project Wizard (multi-step form)
+      - Project Generation Progress
+      - Project Review (clip grid with playback)
+      - Characters List
+      - Character Create/Edit
+      - Settings (profile + API keys)
+      - Admin Dashboard (admin only)
+      - Admin Users List (admin only)
+    </pages>
+  </ui_layout>
+
+  <design_system>
+    <color_palette>
+      - Primary: Deep blue (#1e40af)
+      - Secondary: Slate gray (#475569)
+      - Accent: Indigo (#6366f1)
+      - Success: Green (#22c55e)
+      - Error: Red (#ef4444)
+      - Background: White / Light gray (#f8fafc)
+      - Dark mode: Optional, can be added later
+    </color_palette>
+    <typography>
+      - Font family: Inter or system fonts
+      - Clean, modern, readable
+    </typography>
+    <components>
+      - Consistent button styles
+      - Card-based layouts
+      - Modal dialogs for confirmations
+      - Toast notifications for feedback
+      - Progress bars for generation
+    </components>
+  </design_system>
+
+  <implementation_steps>
+    <step number="1">
+      <title>Project Setup and Authentication</title>
+      <tasks>
+        - Initialize React frontend with Tailwind
+        - Initialize Node.js/Express backend with Prisma
+        - Set up PostgreSQL database
+        - Implement user registration/login/logout
+        - Implement email verification
+        - Implement password reset
+        - Create protected route middleware
+      </tasks>
+    </step>
+    <step number="2">
+      <title>User Profile and API Keys</title>
+      <tasks>
+        - Create settings page
+        - Implement API key storage (encrypted)
+        - Create API key configuration UI
+        - Implement profile update
+      </tasks>
+    </step>
+    <step number="3">
+      <title>Character Profiles</title>
+      <tasks>
+        - Create characters CRUD API
+        - Create characters list page
+        - Create character create/edit form
+        - Implement image upload for characters
+      </tasks>
+    </step>
+    <step number="4">
+      <title>Project Management</title>
+      <tasks>
+        - Create projects CRUD API
+        - Create projects list page
+        - Implement project status tracking
+        - Create dashboard with recent projects
+      </tasks>
+    </step>
+    <step number="5">
+      <title>Project Wizard</title>
+      <tasks>
+        - Create multi-step wizard component
+        - Implement each wizard step UI
+        - Implement voice selection from 11Labs API
+        - Save wizard progress
+      </tasks>
+    </step>
+    <step number="6">
+      <title>AI Scene Generation</title>
+      <tasks>
+        - Integrate with AI service for scene generation
+        - Generate dialogues, camera angles, emotions
+        - Break into 6-second segments
+        - Create scene review/edit UI
+      </tasks>
+    </step>
+    <step number="7">
+      <title>Image Generation Pipeline</title>
+      <tasks>
+        - Integrate NanoBanana Pro / Hailuo image API
+        - Implement character consistency logic
+        - Generate start/end image pairs
+        - Store generated images
+      </tasks>
+    </step>
+    <step number="8">
+      <title>Video Generation Pipeline</title>
+      <tasks>
+        - Integrate Hailuo 2.3 / Kling 2.6 video API
+        - Generate 6-second clips from image pairs
+        - Store generated video clips
+        - Handle errors and retries
+      </tasks>
+    </step>
+    <step number="9">
+      <title>Audio Generation Pipeline</title>
+      <tasks>
+        - Integrate 11Labs API
+        - Generate dialogue audio per character
+        - Sync audio with video clips
+        - Store generated audio
+      </tasks>
+    </step>
+    <step number="10">
+      <title>Real-time Progress</title>
+      <tasks>
+        - Implement WebSocket server
+        - Send generation progress updates
+        - Create progress UI with stages
+        - Handle connection drops gracefully
+      </tasks>
+    </step>
+    <step number="11">
+      <title>Clip Review and Regeneration</title>
+      <tasks>
+        - Create clip review grid
+        - Implement video playback
+        - Implement single clip regeneration
+        - Preview and confirm regeneration
+      </tasks>
+    </step>
+    <step number="12">
+      <title>Export and Final Video</title>
+      <tasks>
+        - Implement video stitching (ffmpeg or similar)
+        - Combine all clips with audio
+        - Implement download endpoints
+        - Create export UI
+      </tasks>
+    </step>
+    <step number="13">
+      <title>Admin Dashboard</title>
+      <tasks>
+        - Create admin routes and middleware
+        - Create admin dashboard with stats
+        - Create users list page
+        - Implement user details view
+      </tasks>
+    </step>
+    <step number="14">
+      <title>Polish and Testing</title>
+      <tasks>
+        - Add loading states everywhere
+        - Add error handling everywhere
+        - Responsive design adjustments
+        - End-to-end testing
+        - Security review
+      </tasks>
+    </step>
+  </implementation_steps>
+
+  <success_criteria>
+    <functionality>
+      - Users can register, verify email, and log in
+      - Users can configure their API keys
+      - Users can create and manage character profiles
+      - Users can create video projects via guided wizard
+      - AI generates consistent scene breakdowns
+      - System generates images with character consistency
+      - System generates video clips from image pairs
+      - System generates audio dialogue
+      - Users can review and regenerate individual clips
+      - Users can export individual clips or final combined video
+      - Admin can view users and usage stats
+    </functionality>
+    <user_experience>
+      - Wizard flow is intuitive and easy to follow
+      - Progress updates are real-time and informative
+      - Errors are clearly communicated
+      - All actions have appropriate feedback
+    </user_experience>
+    <technical_quality>
+      - API keys are securely stored
+      - Authentication properly enforced
+      - No unauthorized access to other users' data
+      - Graceful error handling throughout
+      - Responsive and performant UI
+    </technical_quality>
+    <design_polish>
+      - Clean, modern interface
+      - Consistent styling throughout
+      - Professional appearance suitable for SaaS
+    </design_polish>
+  </success_criteria>
+</project_specification>
