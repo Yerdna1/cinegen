@@ -5,8 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -14,7 +14,7 @@ model User {
   email         String    @unique
   passwordHash  String    @map("password_hash")
   emailVerified Boolean   @default(false) @map("email_verified")
-  role          Role      @default(USER)
+  role          String    @default("USER") // USER or ADMIN
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -24,11 +24,6 @@ model User {
   projects      Project[]
 
   @@map("users")
-}
-
-enum Role {
-  USER
-  ADMIN
 }
 
 model ApiKey {
@@ -63,16 +58,16 @@ model Character {
 }
 
 model Project {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
   name            String
-  status          ProjectStatus @default(DRAFT)
-  durationSeconds Int?          @map("duration_seconds")
+  status          String   @default("DRAFT") // DRAFT, GENERATING, COMPLETE, FAILED
+  durationSeconds Int?     @map("duration_seconds")
   genre           String?
   setting         String?
   plot            String?
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   // Relations
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -81,13 +76,6 @@ model Project {
   generationJobs    GenerationJob[]
 
   @@map("projects")
-}
-
-enum ProjectStatus {
-  DRAFT
-  GENERATING
-  COMPLETE
-  FAILED
 }
 
 model ProjectCharacter {
@@ -106,20 +94,20 @@ model ProjectCharacter {
 }
 
 model Scene {
-  id             String      @id @default(uuid())
-  projectId      String      @map("project_id")
-  sequenceNumber Int         @map("sequence_number")
+  id             String   @id @default(uuid())
+  projectId      String   @map("project_id")
+  sequenceNumber Int      @map("sequence_number")
   dialogue       String?
-  cameraAngle    String?     @map("camera_angle")
+  cameraAngle    String?  @map("camera_angle")
   emotions       String?
   actions        String?
-  startImageUrl  String?     @map("start_image_url")
-  endImageUrl    String?     @map("end_image_url")
-  videoUrl       String?     @map("video_url")
-  audioUrl       String?     @map("audio_url")
-  status         SceneStatus @default(PENDING)
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  startImageUrl  String?  @map("start_image_url")
+  endImageUrl    String?  @map("end_image_url")
+  videoUrl       String?  @map("video_url")
+  audioUrl       String?  @map("audio_url")
+  status         String   @default("PENDING") // PENDING, GENERATING, COMPLETE, FAILED
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -128,41 +116,20 @@ model Scene {
   @@map("scenes")
 }
 
-enum SceneStatus {
-  PENDING
-  GENERATING
-  COMPLETE
-  FAILED
-}
-
 model GenerationJob {
-  id             String        @id @default(uuid())
-  projectId      String        @map("project_id")
-  jobType        JobType       @map("job_type")
-  status         JobStatus     @default(PENDING)
-  progressPercent Int          @default(0) @map("progress_percent")
-  errorMessage   String?       @map("error_message")
-  startedAt      DateTime?     @map("started_at")
-  completedAt    DateTime?     @map("completed_at")
+  id              String    @id @default(uuid())
+  projectId       String    @map("project_id")
+  jobType         String    @map("job_type") // IMAGE, VIDEO, AUDIO, COMBINE
+  status          String    @default("PENDING") // PENDING, RUNNING, COMPLETE, FAILED
+  progressPercent Int       @default(0) @map("progress_percent")
+  errorMessage    String?   @map("error_message")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
 
   // Relations
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("generation_jobs")
-}
-
-enum JobType {
-  IMAGE
-  VIDEO
-  AUDIO
-  COMBINE
-}
-
-enum JobStatus {
-  PENDING
-  RUNNING
-  COMPLETE
-  FAILED
 }
 
 model BackgroundMusic {
@@ -178,14 +145,9 @@ model VerificationToken {
   id        String   @id @default(uuid())
   token     String   @unique
   email     String
-  type      TokenType
+  type      String   // EMAIL_VERIFICATION, PASSWORD_RESET
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("verification_tokens")
-}
-
-enum TokenType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
 }
