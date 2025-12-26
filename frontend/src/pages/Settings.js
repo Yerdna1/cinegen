@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [apiKeys, setApiKeys] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const providers = [
     { id: 'hailuo', name: 'Hailuo/Kling', description: 'For video generation' },
@@ -46,6 +51,29 @@ export default function Settings() {
       toast.error('Failed to save API key');
     } finally {
       setSaving(prev => ({ ...prev, [provider]: false }));
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      toast.error('Please enter your password');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await api.delete('/users/account', { data: { password: deletePassword } });
+      toast.success('Account deleted successfully');
+      logout();
+      navigate('/login');
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast.error('Incorrect password');
+      } else {
+        toast.error('Failed to delete account');
+      }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -95,6 +123,57 @@ export default function Settings() {
           ))}
         </div>
       </div>
+
+      {/* Danger Zone */}
+      <div className="bg-white p-6 rounded-lg shadow border border-red-200">
+        <h2 className="text-lg font-semibold text-red-600 mb-4">Danger Zone</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Once you delete your account, there is no going back. Please be certain.
+        </p>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Delete Account
+        </button>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Account Deletion</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This action cannot be undone. Enter your password to confirm.
+            </p>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Enter your password"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || !deletePassword}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

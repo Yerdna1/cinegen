@@ -86,7 +86,7 @@ Tables created in Prisma schema:
 
 ## Current State
 
-- Features: 95 created, 9 passing (9.5%)
+- Features: 95 created, 10 passing (10.5%)
 - Backend: Structure complete, routes implemented, SQLite database active
 - Frontend: All pages created with functional UI
 - Database: SQLite (dev.db), migrations applied and running
@@ -112,6 +112,13 @@ Tables created in Prisma schema:
    - UI shows masked key: `****1234` (only last 4 chars visible)
    - Database stores AES-256-GCM encrypted value (IV:AuthTag:CipherText format)
    - Key persists after page refresh, still masked correctly
+
+4. **Feature #10 - Delete account requires password confirmation** - PASSED
+   - Added DELETE /api/users/account endpoint with password verification
+   - Added Danger Zone section in Settings UI with modal
+   - Wrong password returns 401 "Incorrect password"
+   - Correct password successfully deletes account
+   - Verified deleted user cannot login
 
 ### Regression Tests Performed
 - Feature #2: Unauthenticated redirect to login - STILL PASSING

@@ -146,4 +146,41 @@ router.put('/api-keys', async (req, res, next) => {
   }
 });
 
+// DELETE /api/users/account
+router.delete('/account', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const bcrypt = require('bcryptjs');
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required to delete account' });
+    }
+
+    // Get user with password hash
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+
+    // Delete user (cascades to related data)
+    await prisma.user.delete({
+      where: { id: req.user.id }
+    });
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
