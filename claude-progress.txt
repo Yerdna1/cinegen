@@ -86,7 +86,7 @@ Tables created in Prisma schema:
 
 ## Current State
 
-- Features: 95 created, 8 passing (8.4%)
+- Features: 95 created, 9 passing (9.5%)
 - Backend: Structure complete, routes implemented, SQLite database active
 - Frontend: All pages created with functional UI
 - Database: SQLite (dev.db), migrations applied and running
@@ -106,6 +106,12 @@ Tables created in Prisma schema:
    - Message: "If an account exists, we have sent a password reset link."
    - Reset token successfully generates and works for valid users
    - User can login with new password after reset
+
+3. **Feature #9 - API keys stored encrypted and displayed masked** - PASSED
+   - Saved test API key: `sk-test-hailuo-api-key-ending-1234`
+   - UI shows masked key: `****1234` (only last 4 chars visible)
+   - Database stores AES-256-GCM encrypted value (IV:AuthTag:CipherText format)
+   - Key persists after page refresh, still masked correctly
 
 ### Regression Tests Performed
 - Feature #2: Unauthenticated redirect to login - STILL PASSING
