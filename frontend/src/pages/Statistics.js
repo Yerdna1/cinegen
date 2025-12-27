@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import {
   ChartBarIcon,
@@ -6,14 +7,17 @@ import {
   FilmIcon,
   SpeakerWaveIcon,
   CpuChipIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  ArrowTrendingUpIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 
 export default function Statistics() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedPeriod, setSelectedPeriod] = useState('30'); // days
+  const [selectedPeriod, setSelectedPeriod] = useState('30');
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchStatistics();
@@ -26,7 +30,7 @@ export default function Statistics() {
       setStats(response.data);
     } catch (err) {
       console.error('Failed to fetch statistics:', err);
-      setError('Failed to load statistics');
+      setError(t('errors.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -56,7 +60,7 @@ export default function Statistics() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="cinema-spinner w-12 h-12" style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}></div>
       </div>
     );
   }
@@ -64,156 +68,181 @@ export default function Statistics() {
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">{error}</p>
+        <ChartBarIcon className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--color-text-subtle)' }} />
+        <p className="text-red-500 mb-4">{error}</p>
         <button
           onClick={fetchStatistics}
-          className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+          className="cinema-btn"
         >
-          Retry
+          {t('common.retry')}
         </button>
       </div>
     );
   }
 
+  const statCards = [
+    {
+      key: 'tokens',
+      label: t('statistics.totalTokens'),
+      value: formatNumber(stats?.summary?.totalTokens || 0),
+      icon: CpuChipIcon,
+      gradient: 'from-blue-500 to-cyan-500',
+      bgColor: 'rgba(59, 130, 246, 0.1)'
+    },
+    {
+      key: 'images',
+      label: t('statistics.imagesGenerated'),
+      value: formatNumber(stats?.summary?.totalImages || 0),
+      icon: PhotoIcon,
+      gradient: 'from-emerald-500 to-green-500',
+      bgColor: 'rgba(16, 185, 129, 0.1)'
+    },
+    {
+      key: 'videos',
+      label: t('statistics.videosGenerated'),
+      value: formatNumber(stats?.summary?.totalVideos || 0),
+      icon: FilmIcon,
+      gradient: 'from-violet-500 to-purple-500',
+      bgColor: 'rgba(139, 92, 246, 0.1)'
+    },
+    {
+      key: 'audio',
+      label: t('statistics.audioGenerated'),
+      value: formatDuration(stats?.summary?.totalAudioSeconds || 0),
+      icon: SpeakerWaveIcon,
+      gradient: 'from-amber-500 to-orange-500',
+      bgColor: 'rgba(245, 158, 11, 0.1)'
+    }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Usage Statistics</h1>
-        <div className="flex items-center space-x-4">
-          <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="all">All time</option>
-          </select>
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('statistics.title')}
+          </h1>
+          <p className="mt-1" style={{ color: 'var(--color-text-muted)' }}>
+            {t('statistics.subtitle')}
+          </p>
         </div>
+        <select
+          value={selectedPeriod}
+          onChange={(e) => setSelectedPeriod(e.target.value)}
+          className="cinema-input py-2 pr-10 cursor-pointer"
+          style={{ minWidth: '160px' }}
+        >
+          <option value="7">{t('statistics.last7Days')}</option>
+          <option value="30">{t('statistics.last30Days')}</option>
+          <option value="90">{t('statistics.last90Days')}</option>
+          <option value="all">{t('statistics.allTime')}</option>
+        </select>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Tokens */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100">
-              <CpuChipIcon className="w-6 h-6 text-blue-600" />
+        {statCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.key}
+              className="cinema-card p-6 group"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                    {card.label}
+                  </p>
+                  <p className="mt-2 text-3xl font-display font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                    {card.value}
+                  </p>
+                </div>
+                <div
+                  className="p-3 rounded-xl transition-transform group-hover:scale-110"
+                  style={{ backgroundColor: card.bgColor }}
+                >
+                  <Icon className={`w-6 h-6 bg-gradient-to-r ${card.gradient} bg-clip-text`} style={{ color: card.gradient.includes('blue') ? '#3B82F6' : card.gradient.includes('emerald') ? '#10B981' : card.gradient.includes('violet') ? '#8B5CF6' : '#F59E0B' }} />
+                </div>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Tokens</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatNumber(stats?.summary?.totalTokens || 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Total Images */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-green-100">
-              <PhotoIcon className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Images Generated</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatNumber(stats?.summary?.totalImages || 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Total Videos */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100">
-              <FilmIcon className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Videos Generated</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatNumber(stats?.summary?.totalVideos || 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Total Audio */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-orange-100">
-              <SpeakerWaveIcon className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Audio Generated</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatDuration(stats?.summary?.totalAudioSeconds || 0)}
-              </p>
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Usage by Category */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Usage by Category</h2>
+      <div className="cinema-card overflow-hidden">
+        <div
+          className="px-6 py-4 flex items-center gap-3"
+          style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+        >
+          <ChartBarIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+          <h2 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('statistics.usageByCategory')}
+          </h2>
         </div>
         <div className="p-6">
           {!stats?.byCategory || Object.keys(stats.byCategory).length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No usage data yet</p>
+            <div className="text-center py-8">
+              <ChartBarIcon className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--color-text-subtle)' }} />
+              <p style={{ color: 'var(--color-text-muted)' }}>{t('statistics.noDataYet')}</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full">
                 <thead>
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
+                  <tr style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.category')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Count
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.count')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tokens
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.tokens')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Images
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.images')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Videos
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.videos')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Audio
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.audio')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cost
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.cost')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {Object.entries(stats.byCategory).map(([category, data]) => (
-                    <tr key={category} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 capitalize">
+                <tbody>
+                  {Object.entries(stats.byCategory).map(([category, data], idx) => (
+                    <tr
+                      key={category}
+                      className="transition-colors duration-150"
+                      style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-surface)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <td className="px-4 py-3 text-sm font-medium capitalize" style={{ color: 'var(--color-text-primary)' }}>
                         {category}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatNumber(data.count)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatNumber(data.tokens)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatNumber(data.images)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatNumber(data.videos)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatDuration(data.audioSeconds)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right font-medium" style={{ color: 'var(--color-accent)' }}>
                         ${(data.cost || 0).toFixed(2)}
                       </td>
                     </tr>
@@ -226,63 +255,80 @@ export default function Statistics() {
       </div>
 
       {/* Usage by Provider & Model */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Usage by Provider & Model</h2>
+      <div className="cinema-card overflow-hidden">
+        <div
+          className="px-6 py-4 flex items-center gap-3"
+          style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+        >
+          <CpuChipIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+          <h2 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('statistics.usageByProvider')}
+          </h2>
         </div>
         <div className="p-6">
           {!stats?.byModel || stats.byModel.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No usage data yet</p>
+            <div className="text-center py-8">
+              <CpuChipIcon className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--color-text-subtle)' }} />
+              <p style={{ color: 'var(--color-text-muted)' }}>{t('statistics.noDataYet')}</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full">
                 <thead>
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
+                  <tr style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.category')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Provider
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.provider')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Model
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.model')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Count
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.count')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Input Tokens
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.inputTokens')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Output Tokens
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.outputTokens')}
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cost
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('statistics.cost')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody>
                   {stats.byModel.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 capitalize">
+                    <tr
+                      key={idx}
+                      className="transition-colors duration-150"
+                      style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-surface)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <td className="px-4 py-3 text-sm font-medium capitalize" style={{ color: 'var(--color-text-primary)' }}>
                         {item.category}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {item.provider}
+                      <td className="px-4 py-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        <span className="px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
+                          {item.provider}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                         {item.model}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatNumber(item.count)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatNumber(item.inputTokens)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-text-secondary)' }}>
                         {formatNumber(item.outputTokens)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                      <td className="px-4 py-3 text-sm text-right font-medium" style={{ color: 'var(--color-accent)' }}>
                         ${(item.cost || 0).toFixed(2)}
                       </td>
                     </tr>
@@ -294,17 +340,25 @@ export default function Statistics() {
         </div>
       </div>
 
-      {/* Daily Usage Chart (simplified as bars) */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Daily Usage</h2>
+      {/* Daily Usage Timeline */}
+      <div className="cinema-card overflow-hidden">
+        <div
+          className="px-6 py-4 flex items-center gap-3"
+          style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+        >
+          <CalendarDaysIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+          <h2 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('statistics.recentDailyUsage')}
+          </h2>
         </div>
         <div className="p-6">
           {!stats?.dailyUsage || stats.dailyUsage.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No recent usage data</p>
+            <div className="text-center py-8">
+              <CalendarDaysIcon className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--color-text-subtle)' }} />
+              <p style={{ color: 'var(--color-text-muted)' }}>{t('statistics.noRecentUsage')}</p>
+            </div>
           ) : (
-            <div className="space-y-4">
-              {/* Group by date */}
+            <div className="space-y-3">
               {Object.entries(
                 stats.dailyUsage.reduce((acc, item) => {
                   const dateStr = new Date(item.date).toLocaleDateString();
@@ -316,31 +370,45 @@ export default function Statistics() {
                   return acc;
                 }, {})
               ).slice(0, 14).map(([date, data]) => (
-                <div key={date} className="flex items-center space-x-4">
-                  <div className="w-24 text-sm text-gray-500 flex-shrink-0">{date}</div>
-                  <div className="flex-1 flex space-x-2">
+                <div
+                  key={date}
+                  className="flex items-center gap-4 p-3 rounded-lg transition-colors"
+                  style={{ backgroundColor: 'var(--color-bg-surface)' }}
+                >
+                  <div className="w-28 text-sm font-medium flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>
+                    {date}
+                  </div>
+                  <div className="flex-1 flex flex-wrap gap-3">
                     {data.tokens > 0 && (
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
                         <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <span className="text-xs text-gray-500">{formatNumber(data.tokens)} tokens</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                          {formatNumber(data.tokens)} {t('statistics.tokens').toLowerCase()}
+                        </span>
                       </div>
                     )}
                     {data.images > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span className="text-xs text-gray-500">{data.images} images</span>
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                          {data.images} {t('statistics.images').toLowerCase()}
+                        </span>
                       </div>
                     )}
                     {data.videos > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                        <span className="text-xs text-gray-500">{data.videos} videos</span>
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}>
+                        <div className="w-2 h-2 rounded-full bg-violet-500"></div>
+                        <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                          {data.videos} {t('statistics.videos').toLowerCase()}
+                        </span>
                       </div>
                     )}
                     {data.audioSeconds > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                        <span className="text-xs text-gray-500">{formatDuration(data.audioSeconds)} audio</span>
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                          {formatDuration(data.audioSeconds)} {t('statistics.audio').toLowerCase()}
+                        </span>
                       </div>
                     )}
                   </div>

@@ -2,8 +2,10 @@
   "common": {
     "loading": "Načítava sa...",
     "save": "Uložiť",
+    "saving": "Ukladá sa...",
     "cancel": "Zrušiť",
     "delete": "Odstrániť",
+    "deleting": "Odstraňuje sa...",
     "edit": "Upraviť",
     "create": "Vytvoriť",
     "submit": "Odoslať",
@@ -31,7 +33,9 @@
     "copy": "Kopírovať",
     "copied": "Skopírované!",
     "required": "Povinné",
-    "optional": "Voliteľné"
+    "optional": "Voliteľné",
+    "retry": "Skúsiť znova",
+    "actions": "Akcie"
   },
 
   "nav": {
@@ -74,7 +78,7 @@
 
   "dashboard": {
     "title": "Prehľad",
-    "welcome": "Vitajte späť",
+    "welcome": "Vitajte späť vo vašom kreatívnom štúdiu",
     "recentProjects": "Nedávne projekty",
     "quickStats": "Rýchle štatistiky",
     "totalProjects": "Celkom projektov",
@@ -83,18 +87,22 @@
     "creditsRemaining": "Zostávajúce kredity",
     "createFirstProject": "Vytvorte svoj prvý projekt",
     "noProjectsYet": "Zatiaľ žiadne projekty",
-    "getStarted": "Začnite vytvorením nového projektu"
+    "getStarted": "Začať"
   },
 
   "projects": {
     "title": "Projekty",
+    "subtitle": "{{count}} projekt(y/ov) vo vašej knižnici",
     "newProject": "Nový projekt",
     "createProject": "Vytvoriť projekt",
     "editProject": "Upraviť projekt",
     "deleteProject": "Odstrániť projekt",
     "projectName": "Názov projektu",
     "projectDescription": "Popis",
+    "name": "Názov",
     "genre": "Žáner",
+    "duration": "Trvanie",
+    "statusLabel": "Stav",
     "setting": "Prostredie",
     "plot": "Dej",
     "scenes": "Scény",
@@ -111,11 +119,15 @@
       "completed": "Dokončené",
       "failed": "Zlyhalo"
     },
-    "confirmDelete": "Naozaj chcete odstrániť tento projekt?",
+    "confirmDelete": "Naozaj chcete odstrániť \"{{name}}\"? Túto akciu nie je možné vrátiť späť.",
     "deleteWarning": "Túto akciu nie je možné vrátiť späť.",
     "searchPlaceholder": "Hľadať projekty...",
+    "noProjects": "Nenašli sa žiadne projekty",
     "noResults": "Nenašli sa žiadne projekty",
-    "lastModified": "Naposledy upravené"
+    "createFirst": "Vytvorte svoj prvý projekt a začnite",
+    "allStatus": "Všetky stavy",
+    "lastModified": "Naposledy upravené",
+    "deleted": "Projekt bol úspešne odstránený"
   },
 
   "characters": {
@@ -163,45 +175,118 @@
   },
 
   "statistics": {
-    "title": "Štatistiky",
+    "title": "Štatistiky využitia",
+    "subtitle": "Sledujte využitie AI generovania a náklady",
     "overview": "Prehľad",
     "creditBalance": "Zostatok kreditov",
     "totalSpent": "Celkové výdavky",
     "usageHistory": "História využitia",
     "thisMonth": "Tento mesiac",
     "lastMonth": "Minulý mesiac",
+    "last7Days": "Posledných 7 dní",
+    "last30Days": "Posledných 30 dní",
+    "last90Days": "Posledných 90 dní",
     "allTime": "Celkovo",
     "category": "Kategória",
     "provider": "Poskytovateľ",
+    "model": "Model",
     "count": "Počet",
     "cost": "Náklady",
     "date": "Dátum",
     "noUsage": "Zatiaľ žiadne údaje o využití",
+    "noDataYet": "Zatiaľ žiadne údaje",
+    "noRecentUsage": "Žiadne nedávne údaje o využití",
     "llmUsage": "Využitie LLM",
     "imageUsage": "Využitie obrázkov",
     "audioUsage": "Využitie zvuku",
     "videoUsage": "Využitie videa",
+    "totalTokens": "Celkom tokenov",
+    "imagesGenerated": "Vygenerované obrázky",
+    "videosGenerated": "Vygenerované videá",
+    "audioGenerated": "Vygenerovaný zvuk",
     "tokens": "Tokeny",
+    "inputTokens": "Vstupné tokeny",
+    "outputTokens": "Výstupné tokeny",
     "images": "Obrázky",
+    "videos": "Videá",
+    "audio": "Zvuk",
     "minutes": "Minúty",
-    "videos": "Videá"
+    "usageByCategory": "Využitie podľa kategórie",
+    "usageByProvider": "Využitie podľa poskytovateľa a modelu",
+    "recentDailyUsage": "Nedávne denné využitie"
   },
 
   "settings": {
     "title": "Nastavenia",
+    "subtitle": "Spravujte svoj účet a preferencie",
     "account": "Účet",
+    "profile": "Profil",
+    "email": "E-mail",
+    "role": "Rola",
     "apiKeys": "API kľúče",
+    "apiKeysDesc": "Nakonfigurujte API kľúče pre externé služby. Kľúče sú šifrované.",
     "preferences": "Preferencie",
     "language": "Jazyk",
     "theme": "Téma",
-    "providers": "Poskytovatelia",
-    "llmProvider": "LLM poskytovateľ",
+    "providers": {
+      "claudeOauth": "Používa vaše Claude predplatné (spustite: claude setup-token)",
+      "hailuo": "Pre generovanie videa",
+      "gemini": "Pre AI generovanie obrázkov (Gemini API)",
+      "elevenlabs": "Pre generovanie hlasu/zvuku",
+      "anthropic": "Priamy API prístup (samostatné kredity)",
+      "modal": "Pre vlastné AI modely",
+      "modalKey": "Modal autentifikačný kľúč (ak-xxx)",
+      "modalSecret": "Modal autentifikačné tajomstvo (as-xxx)"
+    },
+    "defaultProviders": "Predvolení poskytovatelia",
+    "defaultProvidersDesc": "Nastavte predvolených AI poskytovateľov pre nové projekty. Budú predvybraní pri vytváraní projektov.",
+    "llmProvider": "LLM poskytovateľ (pre generovanie dialógov)",
+    "llmProviders": {
+      "claudeSdk": "Používa vaše Claude predplatné",
+      "anthropic": "Priame API (samostatné kredity)",
+      "modal": "Vlastný hosting na Modal.com"
+    },
     "imageProvider": "Poskytovateľ obrázkov",
-    "voiceProvider": "Poskytovateľ hlasu",
+    "imageProviders": {
+      "kling": "Cez oficiálne API",
+      "gemini": "Gemini 3 Pro generovanie obrázkov",
+      "modal": "Vlastný hosting na Modal.com"
+    },
+    "voiceProvider": "Poskytovateľ hlasu (pre TTS)",
+    "voiceProviders": {
+      "elevenlabs": "Vysokokvalitné AI hlasy",
+      "chatterbox": "Vlastný hosting na Modal.com",
+      "coqui": "Vlastný hosting na Modal.com"
+    },
+    "saveProviders": "Uložiť predvolených poskytovateľov",
+    "saveEndpoints": "Uložiť koncové body",
+    "modalEndpoints": "Modal.com koncové body",
+    "modalEndpointsDesc": "Nakonfigurujte vlastné Modal.com koncové body. Toto sú vaše nasadené aplikácie z Modal.",
+    "endpoints": {
+      "chatterbox": "Text-na-reč s emocionálnym prejavom",
+      "coqui": "Open-source text-na-reč",
+      "hallo3": "Animácia portrétu a synchronizácia pier",
+      "music": "AI generovanie hudby",
+      "image": "AI generovanie obrázkov (Flux alebo podobné)",
+      "fileS3": "Nástroj na ukladanie súborov"
+    },
     "saveChanges": "Uložiť zmeny",
     "changesSaved": "Zmeny boli úspešne uložené",
+    "preferencesSaved": "Preferencie boli úspešne uložené",
+    "apiKeySaved": "{{provider}} API kľúč uložený",
+    "enterApiKey": "Zadajte nový API kľúč",
+    "addKey": "Pridať kľúč",
+    "updateKey": "Aktualizovať kľúč",
+    "dangerZone": "Nebezpečná zóna",
+    "dangerZoneDesc": "Po odstránení účtu nie je cesta späť. Buďte si istí.",
     "deleteAccount": "Odstrániť účet",
     "deleteAccountWarning": "Toto natrvalo odstráni váš účet a všetky súvisiace údaje.",
+    "confirmDelete": "Potvrdiť odstránenie účtu",
+    "confirmDeleteDesc": "Túto akciu nie je možné vrátiť späť. Zadajte heslo na potvrdenie.",
+    "enterPassword": "Zadajte svoje heslo",
+    "enterPasswordPlaceholder": "Zadajte heslo",
+    "incorrectPassword": "Nesprávne heslo",
+    "accountDeleted": "Účet bol úspešne odstránený",
     "currentPassword": "Aktuálne heslo",
     "newPassword": "Nové heslo",
     "updatePassword": "Aktualizovať heslo",
@@ -233,7 +318,10 @@
     "notFound": "Zdroj nebol nájdený",
     "validation": "Skontrolujte zadané údaje",
     "serverError": "Chyba servera. Skúste to neskôr.",
-    "sessionExpired": "Vaša relácia vypršala. Prihláste sa znova."
+    "sessionExpired": "Vaša relácia vypršala. Prihláste sa znova.",
+    "fetchFailed": "Nepodarilo sa načítať údaje",
+    "saveFailed": "Nepodarilo sa uložiť",
+    "deleteFailed": "Nepodarilo sa odstrániť"
   },
 
   "empty": {

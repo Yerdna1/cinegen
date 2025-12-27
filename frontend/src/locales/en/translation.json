@@ -2,8 +2,10 @@
   "common": {
     "loading": "Loading...",
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "delete": "Delete",
+    "deleting": "Deleting...",
     "edit": "Edit",
     "create": "Create",
     "submit": "Submit",
@@ -31,7 +33,9 @@
     "copy": "Copy",
     "copied": "Copied!",
     "required": "Required",
-    "optional": "Optional"
+    "optional": "Optional",
+    "retry": "Retry",
+    "actions": "Actions"
   },
 
   "nav": {
@@ -74,27 +78,31 @@
 
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welcome back",
+    "welcome": "Welcome back to your creative studio",
     "recentProjects": "Recent Projects",
     "quickStats": "Quick Stats",
     "totalProjects": "Total Projects",
     "totalCharacters": "Total Characters",
     "totalScenes": "Total Scenes",
     "creditsRemaining": "Credits Remaining",
-    "createFirstProject": "Create your first project",
+    "createFirstProject": "Create Your First Project",
     "noProjectsYet": "No projects yet",
-    "getStarted": "Get started by creating a new project"
+    "getStarted": "Get Started"
   },
 
   "projects": {
     "title": "Projects",
+    "subtitle": "{{count}} project(s) in your library",
     "newProject": "New Project",
     "createProject": "Create Project",
     "editProject": "Edit Project",
     "deleteProject": "Delete Project",
     "projectName": "Project Name",
     "projectDescription": "Description",
+    "name": "Name",
     "genre": "Genre",
+    "duration": "Duration",
+    "statusLabel": "Status",
     "setting": "Setting",
     "plot": "Plot",
     "scenes": "Scenes",
@@ -111,11 +119,15 @@
       "completed": "Completed",
       "failed": "Failed"
     },
-    "confirmDelete": "Are you sure you want to delete this project?",
+    "confirmDelete": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
     "deleteWarning": "This action cannot be undone.",
     "searchPlaceholder": "Search projects...",
+    "noProjects": "No projects found",
     "noResults": "No projects found",
-    "lastModified": "Last modified"
+    "createFirst": "Create your first project to get started",
+    "allStatus": "All Status",
+    "lastModified": "Last modified",
+    "deleted": "Project deleted successfully"
   },
 
   "characters": {
@@ -163,45 +175,118 @@
   },
 
   "statistics": {
-    "title": "Statistics",
+    "title": "Usage Statistics",
+    "subtitle": "Track your AI generation usage and costs",
     "overview": "Overview",
     "creditBalance": "Credit Balance",
     "totalSpent": "Total Spent",
     "usageHistory": "Usage History",
     "thisMonth": "This Month",
     "lastMonth": "Last Month",
+    "last7Days": "Last 7 days",
+    "last30Days": "Last 30 days",
+    "last90Days": "Last 90 days",
     "allTime": "All Time",
     "category": "Category",
     "provider": "Provider",
+    "model": "Model",
     "count": "Count",
     "cost": "Cost",
     "date": "Date",
     "noUsage": "No usage data yet",
+    "noDataYet": "No usage data yet",
+    "noRecentUsage": "No recent usage data",
     "llmUsage": "LLM Usage",
     "imageUsage": "Image Usage",
     "audioUsage": "Audio Usage",
     "videoUsage": "Video Usage",
+    "totalTokens": "Total Tokens",
+    "imagesGenerated": "Images Generated",
+    "videosGenerated": "Videos Generated",
+    "audioGenerated": "Audio Generated",
     "tokens": "Tokens",
+    "inputTokens": "Input Tokens",
+    "outputTokens": "Output Tokens",
     "images": "Images",
+    "videos": "Videos",
+    "audio": "Audio",
     "minutes": "Minutes",
-    "videos": "Videos"
+    "usageByCategory": "Usage by Category",
+    "usageByProvider": "Usage by Provider & Model",
+    "recentDailyUsage": "Recent Daily Usage"
   },
 
   "settings": {
     "title": "Settings",
+    "subtitle": "Manage your account and preferences",
     "account": "Account",
+    "profile": "Profile",
+    "email": "Email",
+    "role": "Role",
     "apiKeys": "API Keys",
+    "apiKeysDesc": "Configure your API keys for external services. Keys are encrypted at rest.",
     "preferences": "Preferences",
     "language": "Language",
     "theme": "Theme",
-    "providers": "Providers",
-    "llmProvider": "LLM Provider",
+    "providers": {
+      "claudeOauth": "Uses your Claude subscription (run: claude setup-token)",
+      "hailuo": "For video generation",
+      "gemini": "For AI image generation (Gemini API)",
+      "elevenlabs": "For voice/audio generation",
+      "anthropic": "Direct API access (separate credits)",
+      "modal": "For self-hosted AI models",
+      "modalKey": "Modal authentication key (ak-xxx)",
+      "modalSecret": "Modal authentication secret (as-xxx)"
+    },
+    "defaultProviders": "Default Providers",
+    "defaultProvidersDesc": "Set your default AI providers for new projects. These will be pre-selected when creating projects.",
+    "llmProvider": "LLM Provider (for dialogue generation)",
+    "llmProviders": {
+      "claudeSdk": "Uses your Claude subscription",
+      "anthropic": "Direct API (separate credits)",
+      "modal": "Self-hosted on Modal.com"
+    },
     "imageProvider": "Image Provider",
-    "voiceProvider": "Voice Provider",
+    "imageProviders": {
+      "kling": "Via official API",
+      "gemini": "Gemini 3 Pro Image Generation",
+      "modal": "Self-hosted on Modal.com"
+    },
+    "voiceProvider": "Voice Provider (for TTS)",
+    "voiceProviders": {
+      "elevenlabs": "High-quality AI voices",
+      "chatterbox": "Self-hosted on Modal.com",
+      "coqui": "Self-hosted on Modal.com"
+    },
+    "saveProviders": "Save Default Providers",
+    "saveEndpoints": "Save Endpoints",
+    "modalEndpoints": "Modal.com Endpoints",
+    "modalEndpointsDesc": "Configure your self-hosted Modal.com endpoints. These are your deployed apps from Modal.",
+    "endpoints": {
+      "chatterbox": "Text-to-speech with emotional expression",
+      "coqui": "Open-source text-to-speech",
+      "hallo3": "Portrait animation and lip sync",
+      "music": "AI music generation",
+      "image": "AI image generation (Flux or similar)",
+      "fileS3": "File storage utility"
+    },
     "saveChanges": "Save Changes",
     "changesSaved": "Changes saved successfully",
+    "preferencesSaved": "Preferences saved successfully",
+    "apiKeySaved": "{{provider}} API key saved",
+    "enterApiKey": "Enter new API key",
+    "addKey": "Add key",
+    "updateKey": "Update key",
+    "dangerZone": "Danger Zone",
+    "dangerZoneDesc": "Once you delete your account, there is no going back. Please be certain.",
     "deleteAccount": "Delete Account",
     "deleteAccountWarning": "This will permanently delete your account and all associated data.",
+    "confirmDelete": "Confirm Account Deletion",
+    "confirmDeleteDesc": "This action cannot be undone. Enter your password to confirm.",
+    "enterPassword": "Please enter your password",
+    "enterPasswordPlaceholder": "Enter your password",
+    "incorrectPassword": "Incorrect password",
+    "accountDeleted": "Account deleted successfully",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
     "updatePassword": "Update Password",
@@ -233,7 +318,10 @@
     "notFound": "Resource not found",
     "validation": "Please check your input",
     "serverError": "Server error. Please try again later.",
-    "sessionExpired": "Your session has expired. Please sign in again."
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "fetchFailed": "Failed to load data",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete"
   },
 
   "empty": {
