@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 
 // Public Pages
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -62,8 +63,8 @@ function ProtectedRoute({ children, adminOnly = false }) {
 function App() {
   return (
     <Routes>
-      {/* Public Routes - Dashboard is the landing page (redirects to login if not authenticated) */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Public Routes */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
