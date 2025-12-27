@@ -128,14 +128,118 @@ export default function StepFinalize({ projectId, scenes }) {
         // Download zip file
         window.open(response.data.downloadUrl, '_blank');
         toast.success('Scene files downloading...');
-      } else if (response.data.scenes) {
-        // Open each scene URL in new tab for manual download
-        response.data.scenes.forEach((scene, index) => {
-          setTimeout(() => {
-            window.open(scene.url, '_blank');
-          }, index * 500); // Stagger downloads
-        });
-        toast.success(`Opening ${response.data.scenes.length} scene videos for download`);
+      } else if (response.data.scenes && response.data.scenes.length > 0) {
+        // Generate an HTML page with download links
+        const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Scene Videos</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .scene-link {
+      display: block;
+      padding: 15px 20px;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #495057;
+      transition: all 0.2s;
+    }
+    .scene-link:hover {
+      background: #e7f5ff;
+      border-color: #1971c2;
+      transform: translateX(5px);
+    }
+    .scene-number {
+      font-weight: bold;
+      color: #1971c2;
+    }
+    .dialogue {
+      font-size: 14px;
+      color: #868e96;
+      margin-top: 5px;
+    }
+    .download-all {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #1971c2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .download-all:hover {
+      background: #1864ab;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📹 Download Scene Videos</h1>
+    <p>Click on each link below to download the scene videos. Right-click → "Save link as..." to save with custom filename.</p>
+    ${response.data.scenes.map(scene => `
+      <a href="${scene.url}" download="${scene.filename}" class="scene-link" target="_blank">
+        <div class="scene-number">Scene ${scene.sequenceNumber} - ${scene.filename}</div>
+        ${scene.dialogue ? `<div class="dialogue">"${scene.dialogue.substring(0, 100)}${scene.dialogue.length > 100 ? '...' : ''}"</div>` : ''}
+      </a>
+    `).join('')}
+    <button class="download-all" onclick="downloadAll()">Download All (${response.data.scenes.length} scenes)</button>
+  </div>
+  <script>
+    function downloadAll() {
+      const links = ${JSON.stringify(response.data.scenes.map(s => ({ url: s.url, filename: s.filename })))};
+      links.forEach((link, index) => {
+        setTimeout(() => {
+          const a = document.createElement('a');
+          a.href = link.url;
+          a.download = link.filename;
+          a.click();
+        }, index * 1000);
+      });
+    }
+  </script>
+</body>
+</html>`;
+
+        // Create blob and download the HTML file
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'download_scenes.html';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast.success('Download page created! Open the HTML file to download all scenes.');
       }
     } catch (error) {
       console.error('Download error:', error);
