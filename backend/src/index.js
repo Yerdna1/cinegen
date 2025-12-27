@@ -1,10 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const http = require('http');
 const path = require('path');
-const { WebSocketServer } = require('ws');
 const { PrismaClient } = require('@prisma/client');
+
+// Check if running in Vercel serverless
+const isVercel = process.env.VERCEL === '1';
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -32,41 +33,46 @@ const prisma = new PrismaClient();
 
 // Initialize Express
 const app = express();
-const server = http.createServer(app);
 
-// WebSocket server for real-time updates - handle all ws paths
-const wss = new WebSocketServer({ server });
-
-// Store WebSocket connections by project ID
+// Store WebSocket connections by project ID (only used in non-serverless mode)
 const projectConnections = new Map();
 
-wss.on('connection', (ws, req) => {
-  const url = new URL(req.url, 'http://localhost');
-  // Extract project ID from path like /ws/generation/{projectId} or /ws/{projectId}
-  const pathParts = url.pathname.split('/').filter(p => p);
-  const projectId = pathParts[pathParts.length - 1]; // Last segment is the project ID
+// WebSocket setup only for non-Vercel environments
+let server, wss;
+if (!isVercel) {
+  const http = require('http');
+  const { WebSocketServer } = require('ws');
 
-  console.log('WebSocket connection for project:', projectId);
+  server = http.createServer(app);
+  wss = new WebSocketServer({ server });
 
-  if (projectId) {
-    if (!projectConnections.has(projectId)) {
-      projectConnections.set(projectId, new Set());
-    }
-    projectConnections.get(projectId).add(ws);
+  wss.on('connection', (ws, req) => {
+    const url = new URL(req.url, 'http://localhost');
+    const pathParts = url.pathname.split('/').filter(p => p);
+    const projectId = pathParts[pathParts.length - 1];
 
-    ws.on('close', () => {
-      const connections = projectConnections.get(projectId);
-      if (connections) {
-        connections.delete(ws);
-        if (connections.size === 0) {
-          projectConnections.delete(projectId);
-        }
+    console.log('WebSocket connection for project:', projectId);
+
+    if (projectId) {
+      if (!projectConnections.has(projectId)) {
+        projectConnections.set(projectId, new Set());
       }
-    });
-  }
-});
+      projectConnections.get(projectId).add(ws);
 
-// Make WebSocket broadcast available to routes
+      ws.on('close', () => {
+        const connections = projectConnections.get(projectId);
+        if (connections) {
+          connections.delete(ws);
+          if (connections.size === 0) {
+            projectConnections.delete(projectId);
+          }
+        }
+      });
+    }
+  });
+}
+
+// Make WebSocket broadcast available to routes (no-op in serverless)
 app.set('broadcastProgress', (projectId, data) => {
   const connections = projectConnections.get(projectId);
   if (connections) {
