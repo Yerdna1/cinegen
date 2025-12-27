@@ -34,6 +34,14 @@ const PROVIDERS = {
     service: modalTTSService,
     model: 'chatterbox',
     requiresUserKey: false
+  },
+  'modal-coqui': {
+    id: 'modal-coqui',
+    name: 'Coqui TTS (Modal)',
+    description: 'Self-hosted Coqui TTS on Modal.com',
+    service: modalTTSService,
+    model: 'f5tts', // Uses same model type as F5-TTS
+    requiresUserKey: false
   }
 };
 

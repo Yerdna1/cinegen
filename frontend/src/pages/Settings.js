@@ -32,7 +32,9 @@ export default function Settings() {
     { id: 'nanobanana', name: 'NanoBanana', description: 'For image generation' },
     { id: '11labs', name: '11Labs', description: 'For voice/audio generation' },
     { id: 'anthropic', name: 'Anthropic API', description: 'Direct API access (separate credits)' },
-    { id: 'modal', name: 'Modal.com', description: 'For self-hosted AI models' }
+    { id: 'modal', name: 'Modal.com API Key', description: 'For self-hosted AI models' },
+    { id: 'modal-key', name: 'Modal Key', description: 'Modal authentication key (ak-xxx)', isModalAuth: true },
+    { id: 'modal-secret', name: 'Modal Secret', description: 'Modal authentication secret (as-xxx)', isModalAuth: true }
   ];
 
   const llmProviderOptions = [
@@ -265,7 +267,7 @@ export default function Settings() {
               type="text"
               value={preferences.modalChatterboxEndpoint || ''}
               onChange={(e) => updatePreference('modalChatterboxEndpoint', e.target.value)}
-              placeholder="https://username--chatterbox-tts-generator-generate.modal.run"
+              placeholder="https://username--chatterbox-tts-generator-texttospeechserve-xxxxx.modal.run"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
             <p className="text-xs text-gray-400 mt-1">Text-to-speech with emotional expression</p>

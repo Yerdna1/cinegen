@@ -236,7 +236,8 @@ export default function ProjectWizard() {
       setVoiceProviders([
         { id: 'elevenlabs', name: 'ElevenLabs', available: false },
         { id: 'modal-f5tts', name: 'F5-TTS (Modal)', available: false },
-        { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', available: false }
+        { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', available: false },
+        { id: 'modal-coqui', name: 'Coqui TTS (Modal)', available: false }
       ]);
     }
   };
@@ -629,7 +630,7 @@ export default function ProjectWizard() {
               <p className="text-xs text-gray-500 mb-3">
                 Choose which text-to-speech service to use for generating character voices.
               </p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {voiceProviders.length > 0 ? voiceProviders.map(provider => (
                   <button
                     key={provider.id}
@@ -656,54 +657,30 @@ export default function ProjectWizard() {
                   </button>
                 )) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateFormData('voiceProvider', 'elevenlabs');
-                        updateFormData('voiceAssignments', {});
-                        fetchVoices('elevenlabs');
-                      }}
-                      className={`p-3 border rounded-lg text-left ${
-                        formData.voiceProvider === 'elevenlabs'
-                          ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="font-medium text-sm">ElevenLabs</div>
-                      <div className="text-xs text-gray-500 mt-1">High-quality AI voices</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateFormData('voiceProvider', 'modal-f5tts');
-                        updateFormData('voiceAssignments', {});
-                        fetchVoices('modal-f5tts');
-                      }}
-                      className={`p-3 border rounded-lg text-left ${
-                        formData.voiceProvider === 'modal-f5tts'
-                          ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="font-medium text-sm">F5-TTS (Modal)</div>
-                      <div className="text-xs text-gray-500 mt-1">Flow-matching TTS</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateFormData('voiceProvider', 'modal-chatterbox');
-                        updateFormData('voiceAssignments', {});
-                        fetchVoices('modal-chatterbox');
-                      }}
-                      className={`p-3 border rounded-lg text-left ${
-                        formData.voiceProvider === 'modal-chatterbox'
-                          ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="font-medium text-sm">Chatterbox (Modal)</div>
-                      <div className="text-xs text-gray-500 mt-1">Expressive conversational TTS</div>
-                    </button>
+                    {[
+                      { id: 'elevenlabs', name: 'ElevenLabs', desc: 'High-quality AI voices' },
+                      { id: 'modal-f5tts', name: 'F5-TTS (Modal)', desc: 'Flow-matching TTS' },
+                      { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', desc: 'Expressive conversational TTS' },
+                      { id: 'modal-coqui', name: 'Coqui TTS (Modal)', desc: 'Self-hosted Coqui TTS' }
+                    ].map(provider => (
+                      <button
+                        key={provider.id}
+                        type="button"
+                        onClick={() => {
+                          updateFormData('voiceProvider', provider.id);
+                          updateFormData('voiceAssignments', {});
+                          fetchVoices(provider.id);
+                        }}
+                        className={`p-3 border rounded-lg text-left ${
+                          formData.voiceProvider === provider.id
+                            ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{provider.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{provider.desc}</div>
+                      </button>
+                    ))}
                   </>
                 )}
               </div>

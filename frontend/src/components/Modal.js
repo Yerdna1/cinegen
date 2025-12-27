@@ -63,6 +63,57 @@ export default function Modal({ isOpen, onClose, title, children, footer }) {
   );
 }
 
+// Loading Modal Component - Non-dismissible loading overlay
+export function LoadingModal({ isOpen, title = 'Processing...', message, progress }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* Backdrop - non-clickable */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+
+        {/* Modal */}
+        <div className="relative bg-white rounded-lg shadow-xl max-w-sm w-full mx-auto z-10 p-6">
+          {/* Spinner */}
+          <div className="flex justify-center mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-200 border-t-primary-600"></div>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+            {title}
+          </h3>
+
+          {/* Message */}
+          {message && (
+            <p className="text-sm text-gray-600 text-center mb-3">
+              {message}
+            </p>
+          )}
+
+          {/* Progress bar */}
+          {progress !== undefined && (
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+              <div
+                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+              />
+            </div>
+          )}
+
+          {/* Progress text */}
+          {progress !== undefined && (
+            <p className="text-xs text-gray-500 text-center mt-2">
+              {Math.round(progress)}% complete
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Confirmation Modal Component
 export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = 'Delete', confirmColor = 'red' }) {
   const colorClasses = {

@@ -6,13 +6,63 @@
  * - Chatterbox: Expressive conversational TTS
  */
 
+const crypto = require('crypto');
+
+// Encryption for API keys (same as users.js)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const ALGORITHM = 'aes-256-gcm';
+
+function decrypt(encryptedData) {
+  const parts = encryptedData.split(':');
+  const iv = Buffer.from(parts[0], 'hex');
+  const authTag = Buffer.from(parts[1], 'hex');
+  const encrypted = parts[2];
+  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
+
 class ModalTTSService {
   constructor() {
-    // Modal authentication (from modal token list)
-    this.modalKey = process.env.MODAL_KEY;
-    this.modalSecret = process.env.MODAL_SECRET;
+    // Modal authentication (from environment or database)
+    this.defaultModalKey = process.env.MODAL_KEY;
+    this.defaultModalSecret = process.env.MODAL_SECRET;
     this.defaultF5ttsEndpoint = process.env.MODAL_F5TTS_ENDPOINT;
     this.defaultChatterboxEndpoint = process.env.MODAL_CHATTERBOX_ENDPOINT;
+  }
+
+  /**
+   * Get user's Modal credentials from database
+   * @param {object} prisma - Prisma client
+   * @param {string} userId - User ID
+   * @returns {Promise<{modalKey: string|null, modalSecret: string|null}>}
+   */
+  async getUserModalCredentials(prisma, userId) {
+    let modalKey = this.defaultModalKey;
+    let modalSecret = this.defaultModalSecret;
+
+    if (prisma && userId) {
+      try {
+        const [keyRecord, secretRecord] = await Promise.all([
+          prisma.apiKey.findFirst({ where: { userId, provider: 'modal-key' } }),
+          prisma.apiKey.findFirst({ where: { userId, provider: 'modal-secret' } })
+        ]);
+
+        if (keyRecord) {
+          modalKey = decrypt(keyRecord.encryptedKey);
+        }
+        if (secretRecord) {
+          modalSecret = decrypt(secretRecord.encryptedKey);
+        }
+      } catch (error) {
+        console.warn('Failed to get Modal credentials from database:', error.message);
+      }
+    }
+
+    return { modalKey, modalSecret };
   }
 
   /**
@@ -159,9 +209,9 @@ class ModalTTSService {
       throw new Error('Chatterbox endpoint not configured. Please add it in Settings.');
     }
 
-    if (!this.modalKey || !this.modalSecret) {
-      throw new Error('Modal authentication not configured. Set MODAL_KEY and MODAL_SECRET in environment.');
-    }
+    // Get Modal credentials from database or environment
+    const { prisma, userId } = options;
+    const { modalKey, modalSecret } = await this.getUserModalCredentials(prisma, userId);
 
     // Chatterbox Modal endpoint expects: { text, voice_S3_key? }
     const body = {
@@ -173,14 +223,20 @@ class ModalTTSService {
       body.voice_S3_key = voiceId;
     }
 
-    // Modal endpoints require Modal-Key and Modal-Secret headers for authenticated endpoints
+    // Headers for Modal request
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    // Add Modal authentication if configured (for protected endpoints)
+    if (modalKey && modalSecret) {
+      headers['Modal-Key'] = modalKey;
+      headers['Modal-Secret'] = modalSecret;
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Modal-Key': this.modalKey,
-        'Modal-Secret': this.modalSecret,
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify(body)
     });
 
@@ -191,7 +247,16 @@ class ModalTTSService {
 
     const data = await response.json();
 
-    // Handle S3 key response (the Chatterbox endpoint returns { s3_key: "tts/uuid.wav" })
+    // Handle base64 audio response (preferred - returns audio directly)
+    if (data.audio_base64) {
+      return {
+        audioBase64: data.audio_base64,
+        audioFormat: data.format || 'wav',
+        status: 'completed'
+      };
+    }
+
+    // Handle S3 key response (legacy - for endpoints that save to S3)
     if (data.s3_key) {
       // Construct the S3 URL from the bucket and key
       const s3Bucket = process.env.MODAL_S3_BUCKET || 'hey-gen-clone-yerdna';
@@ -210,14 +275,7 @@ class ModalTTSService {
       };
     }
 
-    // Handle synchronous response with audio
-    if (data.audio_base64) {
-      return {
-        audioBase64: data.audio_base64,
-        status: 'completed'
-      };
-    }
-
+    // Handle audio URL response
     if (data.audio_url) {
       return {
         audioUrl: data.audio_url,

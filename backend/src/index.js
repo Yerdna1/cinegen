@@ -18,6 +18,11 @@ const exportRoutes = require('./routes/export');
 const galleryRoutes = require('./routes/gallery');
 const generationRoutes = require('./routes/generation');
 
+// Import Inngest
+const { serve } = require('inngest/express');
+const { inngest } = require('./services/inngest');
+const { generateAudioFunction } = require('./functions/audio-generation');
+
 // Import middleware
 const { authenticateToken } = require('./middleware/auth');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -101,6 +106,12 @@ app.use('/api/voices', authenticateToken, voiceRoutes);
 app.use('/api/export', authenticateToken, exportRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes);
 app.use('/api/generation', authenticateToken, generationRoutes);
+
+// Inngest endpoint for background jobs
+app.use('/api/inngest', serve({
+  client: inngest,
+  functions: [generateAudioFunction],
+}));
 
 // Root route - API info
 app.get('/', (req, res) => {

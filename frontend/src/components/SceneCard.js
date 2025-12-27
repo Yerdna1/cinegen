@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { LoadingModal } from './Modal';
 
 // Provider display names for buttons
 const PROVIDER_NAMES = {
@@ -28,6 +29,7 @@ const PROVIDER_NAMES = {
   'modal-image': 'Modal Flux',
   // Voice Providers
   'elevenlabs': 'ElevenLabs',
+  'modal-f5tts': 'F5-TTS',
   'modal-chatterbox': 'Chatterbox',
   'modal-coqui': 'Coqui TTS',
 };
@@ -314,7 +316,15 @@ export default function SceneCard({
   };
 
   return (
-    <div className="border rounded-lg p-4 bg-white shadow-sm">
+    <>
+      {/* Loading Modal for Audio Generation */}
+      <LoadingModal
+        isOpen={isGeneratingAudio}
+        title="Generating Audio"
+        message={`Creating audio for Scene ${index + 1}. This may take a moment...`}
+      />
+
+      <div className="border rounded-lg p-4 bg-white shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -580,5 +590,6 @@ export default function SceneCard({
         </div>
       )}
     </div>
+    </>
   );
 }

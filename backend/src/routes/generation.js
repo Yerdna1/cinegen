@@ -608,6 +608,7 @@ router.get('/voices/:provider', async (req, res, next) => {
 router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
+    const broadcastProgress = req.app.get('broadcastProgress');
     const { voiceProvider, voiceId, options = {} } = req.body;
 
     // Verify project ownership
@@ -663,11 +664,29 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
       }
     }
 
+    // Mark scene as generating and notify via WebSocket
+    await prisma.scene.update({
+      where: { id: req.params.sceneId },
+      data: { status: 'GENERATING' }
+    });
+
+    // Broadcast status update
+    if (broadcastProgress) {
+      broadcastProgress(req.params.id, {
+        type: 'audio_generation_started',
+        sceneId: req.params.sceneId,
+        sequenceNumber: scene.sequenceNumber,
+        message: 'Generating audio...'
+      });
+    }
+
     // Generate speech
     const result = await generateSpeech(provider, voice, scene.dialogue, {
       ...options,
       apiKey,
-      endpoint
+      endpoint,
+      prisma,
+      userId: req.user.id
     });
 
     // If we got audio data, save it
@@ -679,18 +698,30 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
         const uploadsDir = path.join(__dirname, '../../uploads/audio');
         await fs.mkdir(uploadsDir, { recursive: true });
 
-        const filename = `scene-${scene.id}-${Date.now()}.mp3`;
+        const ext = result.audioFormat || 'mp3';
+        const filename = `scene-${scene.id}-${Date.now()}.${ext}`;
         const filepath = path.join(uploadsDir, filename);
 
         await fs.writeFile(filepath, Buffer.from(result.audioBase64, 'base64'));
         audioUrl = `/uploads/audio/${filename}`;
       }
 
-      // Update scene with audio URL
+      // Update scene with audio URL and mark complete
       await prisma.scene.update({
         where: { id: req.params.sceneId },
-        data: { audioUrl }
+        data: { audioUrl, status: 'COMPLETE' }
       });
+
+      // Broadcast completion
+      if (broadcastProgress) {
+        broadcastProgress(req.params.id, {
+          type: 'audio_generation_completed',
+          sceneId: req.params.sceneId,
+          sequenceNumber: scene.sequenceNumber,
+          audioUrl,
+          message: 'Audio generated successfully!'
+        });
+      }
 
       res.json({
         success: true,
@@ -712,6 +743,28 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
     }
   } catch (error) {
     console.error('Audio generation error:', error);
+
+    // Update scene status to failed
+    const prisma = req.app.get('prisma');
+    const broadcastProgress = req.app.get('broadcastProgress');
+
+    try {
+      await prisma.scene.update({
+        where: { id: req.params.sceneId },
+        data: { status: 'FAILED' }
+      });
+
+      if (broadcastProgress) {
+        broadcastProgress(req.params.id, {
+          type: 'audio_generation_failed',
+          sceneId: req.params.sceneId,
+          error: error.message
+        });
+      }
+    } catch (e) {
+      // Ignore secondary errors
+    }
+
     next(error);
   }
 });
@@ -723,6 +776,7 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
 router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
+    const broadcastProgress = req.app.get('broadcastProgress');
 
     // Verify project ownership
     const project = await prisma.project.findFirst({
@@ -787,8 +841,19 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
     const uploadsDir = path.join(__dirname, '../../uploads/audio');
     await fs.mkdir(uploadsDir, { recursive: true });
 
+    // Broadcast start of bulk generation
+    if (broadcastProgress) {
+      broadcastProgress(req.params.id, {
+        type: 'bulk_audio_generation_started',
+        totalScenes: project.scenes.length,
+        message: `Generating audio for ${project.scenes.length} scenes...`
+      });
+    }
+
     // Generate audio for each scene
-    for (const scene of project.scenes) {
+    for (let i = 0; i < project.scenes.length; i++) {
+      const scene = project.scenes[i];
+
       if (!scene.dialogue) {
         results.push({
           sceneId: scene.id,
@@ -800,6 +865,24 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
       }
 
       try {
+        // Broadcast progress for this scene
+        if (broadcastProgress) {
+          broadcastProgress(req.params.id, {
+            type: 'audio_generation_progress',
+            sceneId: scene.id,
+            sequenceNumber: scene.sequenceNumber,
+            current: i + 1,
+            total: project.scenes.length,
+            message: `Generating audio for scene ${scene.sequenceNumber}...`
+          });
+        }
+
+        // Mark scene as generating
+        await prisma.scene.update({
+          where: { id: scene.id },
+          data: { status: 'GENERATING' }
+        });
+
         // Use default voice for now (could parse dialogue to detect speaker)
         const voiceProvider = defaultVoiceProvider;
         const voiceId = defaultVoiceId;
@@ -824,12 +907,13 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
           }
         }
 
-        const result = await generateSpeech(voiceProvider, voiceId, scene.dialogue, { apiKey, endpoint });
+        const result = await generateSpeech(voiceProvider, voiceId, scene.dialogue, { apiKey, endpoint, prisma, userId: req.user.id });
 
         let audioUrl = result.audioUrl;
 
         if (result.audioBase64) {
-          const filename = `scene-${scene.id}-${Date.now()}.mp3`;
+          const ext = result.audioFormat || 'mp3';
+          const filename = `scene-${scene.id}-${Date.now()}.${ext}`;
           const filepath = path.join(uploadsDir, filename);
           await fs.writeFile(filepath, Buffer.from(result.audioBase64, 'base64'));
           audioUrl = `/uploads/audio/${filename}`;
@@ -838,7 +922,19 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
         if (audioUrl) {
           await prisma.scene.update({
             where: { id: scene.id },
-            data: { audioUrl }
+            data: { audioUrl, status: 'COMPLETE' }
+          });
+        }
+
+        // Broadcast scene completion
+        if (broadcastProgress) {
+          broadcastProgress(req.params.id, {
+            type: 'audio_generation_completed',
+            sceneId: scene.id,
+            sequenceNumber: scene.sequenceNumber,
+            audioUrl,
+            current: i + 1,
+            total: project.scenes.length
           });
         }
 
@@ -850,6 +946,25 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
         });
       } catch (error) {
         console.error(`Failed to generate audio for scene ${scene.sequenceNumber}:`, error);
+
+        // Mark scene as failed
+        await prisma.scene.update({
+          where: { id: scene.id },
+          data: { status: 'FAILED' }
+        });
+
+        // Broadcast failure
+        if (broadcastProgress) {
+          broadcastProgress(req.params.id, {
+            type: 'audio_generation_failed',
+            sceneId: scene.id,
+            sequenceNumber: scene.sequenceNumber,
+            error: error.message,
+            current: i + 1,
+            total: project.scenes.length
+          });
+        }
+
         results.push({
           sceneId: scene.id,
           sequenceNumber: scene.sequenceNumber,
@@ -866,6 +981,16 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
     });
 
     const successCount = results.filter(r => r.success).length;
+
+    // Broadcast completion
+    if (broadcastProgress) {
+      broadcastProgress(req.params.id, {
+        type: 'bulk_audio_generation_completed',
+        successCount,
+        totalScenes: project.scenes.length,
+        message: `Generated audio for ${successCount}/${project.scenes.length} scenes`
+      });
+    }
 
     res.json({
       success: true,
