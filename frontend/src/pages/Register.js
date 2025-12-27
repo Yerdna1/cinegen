@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { FilmIcon, ArrowRightIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { FilmIcon, ArrowRightIcon, SparklesIcon, LanguageIcon } from '@heroicons/react/24/outline';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -10,18 +10,88 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [language, setLanguage] = useState('sk');
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const translations = {
+    sk: {
+      joinFuture: 'Pridajte sa k budúcnosti',
+      aiVideoCreation: 'tvorby AI videa',
+      createStunning: 'Vytvárajte ohromujúce dlhé videá s konzistentnými postavami a filmovou kvalitou.',
+      startCreating: 'Začať tvoriť dnes',
+      features: [
+        'Generovanie scén pomocou AI',
+        'Konzistentná tvorba postáv',
+        'Syntéza prirodzeného dialógu',
+        'Profesionálny video výstup'
+      ],
+      joinCreators: 'Pridajte sa k 2 000+ tvorcom tvoriaci s CineGen',
+      createAccount: 'Vytvoriť účet',
+      startJourney: 'Začnite svoju kreatívnu cestu za pár minút',
+      emailAddress: 'E-mailová adresa',
+      password: 'Heslo',
+      confirmPassword: 'Potvrďte heslo',
+      passwordHint: 'Min 8 znakov, aspoň jedno písmeno a číslo',
+      creatingAccount: 'Vytvára sa účet...',
+      termsText: 'Vytvorením účtu súhlasíte s našimi Podmienkami používania a Zásadami ochrany osobných údajov',
+      or: 'alebo',
+      haveAccount: 'Už máte účet?',
+      signIn: 'Prihlásiť sa',
+      backToHome: '← Späť na domovskú stránku',
+      emailRequired: 'E-mail je povinný',
+      emailInvalid: 'Neplatný formát e-mailu',
+      passwordRequired: 'Heslo je povinné',
+      passwordLength: 'Heslo musí mať aspoň 8 znakov',
+      passwordLetter: 'Heslo musí obsahovať aspoň jedno písmeno',
+      passwordNumber: 'Heslo musí obsahovať aspoň jedno číslo',
+      passwordsNoMatch: 'Heslá sa nezhodujú'
+    },
+    en: {
+      joinFuture: 'Join the Future of',
+      aiVideoCreation: 'AI Video Creation',
+      createStunning: 'Create stunning long-form videos with consistent characters and cinematic quality.',
+      startCreating: 'Start Creating Today',
+      features: [
+        'AI-powered scene generation',
+        'Consistent character creation',
+        'Natural dialogue synthesis',
+        'Professional video output'
+      ],
+      joinCreators: 'Join 2,000+ creators building with CineGen',
+      createAccount: 'Create Account',
+      startJourney: 'Start your creative journey in minutes',
+      emailAddress: 'Email Address',
+      password: 'Password',
+      confirmPassword: 'Confirm Password',
+      passwordHint: 'Min 8 characters, at least one letter and number',
+      creatingAccount: 'Creating account...',
+      termsText: 'By creating an account, you agree to our Terms of Service and Privacy Policy',
+      or: 'or',
+      haveAccount: 'Already have an account?',
+      signIn: 'Sign in',
+      backToHome: '← Back to home',
+      emailRequired: 'Email is required',
+      emailInvalid: 'Invalid email format',
+      passwordRequired: 'Password is required',
+      passwordLength: 'Password must be at least 8 characters',
+      passwordLetter: 'Password must contain at least one letter',
+      passwordNumber: 'Password must contain at least one number',
+      passwordsNoMatch: 'Passwords do not match'
+    }
+  };
+
+  const t = translations[language];
+
   const validate = () => {
     const newErrors = {};
-    if (!email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Invalid email format';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    else if (!/[a-zA-Z]/.test(password)) newErrors.password = 'Password must contain at least one letter';
-    else if (!/[0-9]/.test(password)) newErrors.password = 'Password must contain at least one number';
-    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!email) newErrors.email = t.emailRequired;
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = t.emailInvalid;
+    if (!password) newErrors.password = t.passwordRequired;
+    else if (password.length < 8) newErrors.password = t.passwordLength;
+    else if (!/[a-zA-Z]/.test(password)) newErrors.password = t.passwordLetter;
+    else if (!/[0-9]/.test(password)) newErrors.password = t.passwordNumber;
+    if (password !== confirmPassword) newErrors.confirmPassword = t.passwordsNoMatch;
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -33,10 +103,10 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email, password);
-      toast.success('Registration successful! Please verify your email.');
+      toast.success(language === 'sk' ? 'Registrácia úspešná! Prosím, overte svoj e-mail.' : 'Registration successful! Please verify your email.');
       navigate('/dashboard');
     } catch (error) {
-      const message = error.response?.data?.error || 'Registration failed';
+      const message = error.response?.data?.error || (language === 'sk' ? 'Registrácia zlyhala' : 'Registration failed');
       toast.error(message);
     } finally {
       setLoading(false);
@@ -77,28 +147,23 @@ export default function Register() {
           <div className="relative z-10 space-y-6">
             <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-amber-500/20 bg-amber-500/5 backdrop-blur-sm">
               <SparklesIcon className="w-5 h-5 text-amber-400" />
-              <span className="text-sm text-amber-300 font-medium">Start Creating Today</span>
+              <span className="text-sm text-amber-300 font-medium">{t.startCreating}</span>
             </div>
 
             <h1 className="text-5xl font-display font-bold leading-tight">
-              <span className="block text-cream-50">Join the Future of</span>
+              <span className="block text-cream-50">{t.joinFuture}</span>
               <span className="block bg-gradient-to-r from-amber-300 to-rose-400 bg-clip-text text-transparent">
-                AI Video Creation
+                {t.aiVideoCreation}
               </span>
             </h1>
 
             <p className="text-lg text-cinema-subtle max-w-md">
-              Create stunning long-form videos with consistent characters and cinematic quality.
+              {t.createStunning}
             </p>
 
             {/* Features list */}
             <ul className="space-y-3 pt-4">
-              {[
-                'AI-powered scene generation',
-                'Consistent character creation',
-                'Natural dialogue synthesis',
-                'Professional video output'
-              ].map((feature, i) => (
+              {t.features.map((feature, i) => (
                 <li key={i} className="flex items-center gap-3 text-cinema-subtle">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                   {feature}
@@ -118,7 +183,7 @@ export default function Register() {
               ))}
             </div>
             <p className="text-sm text-cinema-muted">
-              Join 2,000+ creators building with CineGen
+              {t.joinCreators}
             </p>
           </div>
         </div>
@@ -136,13 +201,24 @@ export default function Register() {
               </Link>
             </div>
 
+            {/* Language Switcher */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setLanguage(language === 'sk' ? 'en' : 'sk')}
+                className="flex items-center gap-2 text-cinema-subtle hover:text-cream-50 transition-colors text-sm font-medium"
+              >
+                <LanguageIcon className="w-4 h-4" />
+                {language === 'sk' ? 'EN' : 'SK'}
+              </button>
+            </div>
+
             {/* Header */}
             <div className="space-y-2">
               <h2 className="text-3xl font-display font-bold text-cream-50">
-                Create Account
+                {t.createAccount}
               </h2>
               <p className="text-cinema-subtle">
-                Start your creative journey in minutes
+                {t.startJourney}
               </p>
             </div>
 
@@ -151,7 +227,7 @@ export default function Register() {
               {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-cream-50">
-                  Email Address
+                  {t.emailAddress}
                 </label>
                 <input
                   id="email"
@@ -171,7 +247,7 @@ export default function Register() {
               {/* Password */}
               <div className="space-y-2">
                 <label htmlFor="password" className="block text-sm font-medium text-cream-50">
-                  Password
+                  {t.password}
                 </label>
                 <input
                   id="password"
@@ -187,14 +263,14 @@ export default function Register() {
                   <p className="text-sm text-rose-400">{errors.password}</p>
                 )}
                 <p className="text-xs text-cinema-muted">
-                  Min 8 characters, at least one letter and number
+                  {t.passwordHint}
                 </p>
               </div>
 
               {/* Confirm Password */}
               <div className="space-y-2">
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-cream-50">
-                  Confirm Password
+                  {t.confirmPassword}
                 </label>
                 <input
                   id="confirmPassword"
@@ -218,7 +294,7 @@ export default function Register() {
                 className="group relative w-full px-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-cinema-black font-bold rounded-xl overflow-hidden shadow-glow hover:shadow-glow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  {loading ? 'Creating account...' : 'Create Account'}
+                  {loading ? t.creatingAccount : t.createAccount}
                   {!loading && <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -226,7 +302,7 @@ export default function Register() {
 
               {/* Terms */}
               <p className="text-xs text-center text-cinema-muted">
-                By creating an account, you agree to our Terms of Service and Privacy Policy
+                {t.termsText}
               </p>
 
               {/* Divider */}
@@ -235,19 +311,19 @@ export default function Register() {
                   <div className="w-full border-t border-cinema-border" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-cinema-void text-cinema-muted">or</span>
+                  <span className="px-4 bg-cinema-void text-cinema-muted">{t.or}</span>
                 </div>
               </div>
 
               {/* Sign in link */}
               <div className="text-center">
                 <p className="text-sm text-cinema-subtle">
-                  Already have an account?{' '}
+                  {t.haveAccount}{' '}
                   <Link
                     to="/login"
                     className="font-semibold text-amber-400 hover:text-amber-300 transition-colors"
                   >
-                    Sign in
+                    {t.signIn}
                   </Link>
                 </p>
               </div>
@@ -258,7 +334,7 @@ export default function Register() {
                   to="/"
                   className="inline-flex items-center gap-2 text-sm text-cinema-muted hover:text-cream-50 transition-colors"
                 >
-                  ← Back to home
+                  {t.backToHome}
                 </Link>
               </div>
             </form>

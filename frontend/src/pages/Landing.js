@@ -8,12 +8,14 @@ import {
   VideoCameraIcon,
   ArrowRightIcon,
   CheckIcon,
-  PlayIcon
+  PlayIcon,
+  LanguageIcon
 } from '@heroicons/react/24/outline';
 
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
   const [isVisible, setIsVisible] = useState({});
+  const [language, setLanguage] = useState('sk'); // 'sk' or 'en'
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -40,48 +42,177 @@ export default function Landing() {
     return () => observer.disconnect();
   }, []);
 
+  const translations = {
+    sk: {
+      nav: {
+        features: 'Funkcie',
+        howItWorks: 'Ako to funguje',
+        signIn: 'Prihlásiť sa',
+        getStarted: 'Začať'
+      },
+      hero: {
+        badge: 'Tvorba videa pomocou AI',
+        title1: 'Premeňte príbehy na',
+        title2: 'filmovú realitu',
+        description: 'Generujte dlhé AI videá s konzistentnými postavami, inteligentnými rozdeleniami scén a prirodzeným dialógom. Od konceptu po dokončenie—automaticky.',
+        cta1: 'Začať tvoriť zdarma',
+        cta2: 'Sledovať demo',
+        social1: '2 000+ tvorcov',
+        social2: 'Tvorí s CineGen',
+        generating: 'Generuje sa...',
+        sceneComplete: 'Scéna 24 dokončená'
+      },
+      features: {
+        title1: 'Všetko, čo potrebujete',
+        title2: 'na tvorbu pútavých videí',
+        description: 'Výkonné AI nástroje pracujúce v harmónii na premenu vašej kreatívnej vízie na realitu.',
+        items: [
+          {
+            title: 'Generovanie AI videa',
+            description: 'Vytvárajte ohromujúce video klipy s Hailuo 2.3 a Kling 2.6. Konzistentná kvalita, filmový výstup.'
+          },
+          {
+            title: 'Inteligentná tvorba scén',
+            description: 'Inteligentné rozdelenia scén poháňané pokročilou AI. Váš príbeh, dokonale štruktúrovaný.'
+          },
+          {
+            title: 'Konzistencia postáv',
+            description: 'Definujte postavy raz, používajte ich naprieč celým projektom. NanoBanana Pro zabezpečuje vizuálnu koherenciu.'
+          },
+          {
+            title: 'Prirodzený dialóg',
+            description: 'Hlasy 11Labs oživia vaše postavy. Emočné, autentické a perfektne synchronizované.'
+          }
+        ]
+      },
+      workflow: {
+        title1: 'Od nápadu k videu v',
+        title2: 'troch krokoch',
+        description: 'Náš zjednodušený pracovný postup vás prevedie od konceptu po dokončené video bez námahy.',
+        steps: [
+          {
+            title: 'Definujte svoju víziu',
+            description: 'Použite nášho sprievodcu na načrtnutie vášho príbehu, postáv a scén.'
+          },
+          {
+            title: 'AI vykoná ťažkú prácu',
+            description: 'Sledujte, ako sa generujú scény, vytvárajú obrázky, nahrávajú dialógy a produkujú videá.'
+          },
+          {
+            title: 'Stiahnuť a zdieľať',
+            description: 'Získajte svoje vyleštené dlhé video, pripravené očariť vaše publikum.'
+          }
+        ]
+      },
+      cta: {
+        title1: 'Pripravení tvoriť?',
+        title2: 'Začnite svoj prvý projekt dnes',
+        description: 'Pridajte sa k tisíckam tvorcov používajúcich CineGen na oživenie svojich príbehov. Prineste si vlastné API kľúče a začnite generovať videá za pár minút.',
+        button1: 'Začať zdarma',
+        button2: 'Prihlásiť sa'
+      },
+      footer: {
+        features: 'Funkcie',
+        howItWorks: 'Ako to funguje',
+        help: 'Pomoc',
+        copyright: '© 2024 CineGen. Všetky práva vyhradené.'
+      }
+    },
+    en: {
+      nav: {
+        features: 'Features',
+        howItWorks: 'How It Works',
+        signIn: 'Sign In',
+        getStarted: 'Get Started'
+      },
+      hero: {
+        badge: 'AI-Powered Video Creation',
+        title1: 'Turn Stories Into',
+        title2: 'Cinematic Reality',
+        description: 'Generate long-form AI videos with consistent characters, intelligent scene breakdowns, and natural dialogue. From concept to completion—automatically.',
+        cta1: 'Start Creating Free',
+        cta2: 'Watch Demo',
+        social1: '2,000+ creators',
+        social2: 'Building with CineGen',
+        generating: 'Generating...',
+        sceneComplete: 'Scene 24 Complete'
+      },
+      features: {
+        title1: 'Everything You Need',
+        title2: 'To Create Compelling Videos',
+        description: 'Powerful AI tools working in harmony to transform your creative vision into reality.',
+        items: [
+          {
+            title: 'AI Video Generation',
+            description: 'Create stunning video clips with Hailuo 2.3 and Kling 2.6. Consistent quality, cinematic output.'
+          },
+          {
+            title: 'Smart Scene Creation',
+            description: 'Intelligent scene breakdowns powered by advanced AI. Your story, perfectly structured.'
+          },
+          {
+            title: 'Character Consistency',
+            description: 'Define characters once, use them throughout. NanoBanana Pro ensures visual coherence.'
+          },
+          {
+            title: 'Natural Dialogue',
+            description: '11Labs voices bring your characters to life. Emotional, authentic, and perfectly synced.'
+          }
+        ]
+      },
+      workflow: {
+        title1: 'From Idea to Video in',
+        title2: 'Three Steps',
+        description: 'Our streamlined workflow takes you from concept to completed video effortlessly.',
+        steps: [
+          {
+            title: 'Define Your Vision',
+            description: 'Use our guided wizard to outline your story, characters, and scenes.'
+          },
+          {
+            title: 'AI Does the Heavy Lifting',
+            description: 'Watch as scenes are generated, images created, dialogue recorded, and videos produced.'
+          },
+          {
+            title: 'Download & Share',
+            description: 'Get your polished long-form video, ready to captivate your audience.'
+          }
+        ]
+      },
+      cta: {
+        title1: 'Ready to Create?',
+        title2: 'Start Your First Project Today',
+        description: 'Join thousands of creators using CineGen to bring their stories to life. Bring your own API keys and start generating videos in minutes.',
+        button1: 'Get Started Free',
+        button2: 'Sign In'
+      },
+      footer: {
+        features: 'Features',
+        howItWorks: 'How It Works',
+        help: 'Help',
+        copyright: '© 2024 CineGen. All rights reserved.'
+      }
+    }
+  };
+
+  const t = translations[language];
+
   const features = [
     {
       icon: FilmIcon,
-      title: 'Generovanie AI videa',
-      description: 'Vytvárajte ohromujúce video klipy s Hailuo 2.3 a Kling 2.6. Konzistentná kvalita, filmový výstup.',
       gradient: 'from-amber-500 to-rose-500'
     },
     {
       icon: SparklesIcon,
-      title: 'Inteligentná tvorba scén',
-      description: 'Inteligentné rozdelenia scén poháňané pokročilou AI. Váš príbeh, dokonale štruktúrovaný.',
       gradient: 'from-rose-500 to-amber-500'
     },
     {
       icon: UserGroupIcon,
-      title: 'Konzistencia postáv',
-      description: 'Definujte postavy raz, používajte ich naprieč celým projektom. NanoBanana Pro zabezpečuje vizuálnu koherenciu.',
       gradient: 'from-amber-400 to-amber-600'
     },
     {
       icon: MicrophoneIcon,
-      title: 'Prirodzený dialóg',
-      description: 'Hlasy 11Labs oživia vaše postavy. Emočné, autentické a perfektne synchronizované.',
       gradient: 'from-rose-400 to-rose-600'
-    }
-  ];
-
-  const workflow = [
-    {
-      step: '01',
-      title: 'Definujte svoju víziu',
-      description: 'Použite nášho sprievodcu na načrtnutie vášho príbehu, postáv a scén.'
-    },
-    {
-      step: '02',
-      title: 'AI vykoná ťažkú prácu',
-      description: 'Sledujte, ako sa generujú scény, vytvárajú obrázky, nahrávajú dialógy a produkujú videá.'
-    },
-    {
-      step: '03',
-      title: 'Stiahnuť a zdieľať',
-      description: 'Získajte svoje vyleštené dlhé video, pripravené očariť vaše publikum.'
     }
   ];
 
@@ -108,22 +239,32 @@ export default function Landing() {
             {/* Nav Links */}
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-cinema-subtle hover:text-cream-50 transition-colors text-sm font-medium">
-                Funkcie
+                {t.nav.features}
               </a>
               <a href="#how-it-works" className="text-cinema-subtle hover:text-cream-50 transition-colors text-sm font-medium">
-                Ako to funguje
+                {t.nav.howItWorks}
               </a>
+
+              {/* Language Switcher */}
+              <button
+                onClick={() => setLanguage(language === 'sk' ? 'en' : 'sk')}
+                className="flex items-center gap-2 text-cinema-subtle hover:text-cream-50 transition-colors text-sm font-medium"
+              >
+                <LanguageIcon className="w-4 h-4" />
+                {language === 'sk' ? 'EN' : 'SK'}
+              </button>
+
               <Link
                 to="/login"
                 className="text-cinema-subtle hover:text-cream-50 transition-colors text-sm font-medium"
               >
-                Prihlásiť sa
+                {t.nav.signIn}
               </Link>
               <Link
                 to="/register"
                 className="relative px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-cinema-black font-semibold rounded-lg overflow-hidden group"
               >
-                <span className="relative z-10">Začať</span>
+                <span className="relative z-10">{t.nav.getStarted}</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             </div>
@@ -149,20 +290,19 @@ export default function Landing() {
               {/* Badge */}
               <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-amber-500/20 bg-amber-500/5 backdrop-blur-sm animate-fade-in">
                 <SparklesIcon className="w-4 h-4 text-amber-400" />
-                <span className="text-sm text-amber-300 font-medium">Tvorba videa pomocou AI</span>
+                <span className="text-sm text-amber-300 font-medium">{t.hero.badge}</span>
               </div>
 
               {/* Headline */}
               <div className="space-y-4 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <h1 className="text-5xl lg:text-7xl font-display font-bold leading-[1.1]">
-                  <span className="block text-cream-50">Premeňte príbehy na</span>
+                  <span className="block text-cream-50">{t.hero.title1}</span>
                   <span className="block bg-gradient-to-r from-amber-300 via-amber-400 to-rose-400 bg-clip-text text-transparent">
-                    filmovú realitu
+                    {t.hero.title2}
                   </span>
                 </h1>
                 <p className="text-lg lg:text-xl text-cinema-subtle max-w-xl leading-relaxed">
-                  Generujte dlhé AI videá s konzistentnými postavami, inteligentnými rozdeleniami scén
-                  a prirodzeným dialógom. Od konceptu po dokončenie—automaticky.
+                  {t.hero.description}
                 </p>
               </div>
 
@@ -173,7 +313,7 @@ export default function Landing() {
                   className="group relative px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-cinema-black font-bold rounded-xl overflow-hidden shadow-glow-lg hover:shadow-glow transition-all"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
-                    Začať tvoriť zdarma
+                    {t.hero.cta1}
                     <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -181,7 +321,7 @@ export default function Landing() {
 
                 <button className="group px-8 py-4 border-2 border-cinema-border hover:border-amber-500/50 text-cream-50 font-bold rounded-xl transition-all flex items-center justify-center gap-2">
                   <PlayIcon className="w-5 h-5" />
-                  Sledovať demo
+                  {t.hero.cta2}
                 </button>
               </div>
 
@@ -196,8 +336,8 @@ export default function Landing() {
                   ))}
                 </div>
                 <div className="text-sm">
-                  <div className="text-cream-50 font-semibold">2 000+ tvorcov</div>
-                  <div className="text-cinema-muted">Tvorí s CineGen</div>
+                  <div className="text-cream-50 font-semibold">{t.hero.social1}</div>
+                  <div className="text-cinema-muted">{t.hero.social2}</div>
                 </div>
               </div>
             </div>
@@ -239,7 +379,7 @@ export default function Landing() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-                  <span className="text-sm font-medium text-amber-300">Generuje sa...</span>
+                  <span className="text-sm font-medium text-amber-300">{t.hero.generating}</span>
                 </div>
               </div>
 
@@ -249,7 +389,7 @@ export default function Landing() {
               >
                 <div className="flex items-center gap-3">
                   <CheckIcon className="w-5 h-5 text-rose-400" />
-                  <span className="text-sm font-medium">Scéna 24 dokončená</span>
+                  <span className="text-sm font-medium">{t.hero.sceneComplete}</span>
                 </div>
               </div>
             </div>
@@ -269,12 +409,12 @@ export default function Landing() {
           >
             <h2 className="text-4xl lg:text-5xl font-display font-bold mb-6">
               <span className="bg-gradient-to-r from-amber-300 to-rose-400 bg-clip-text text-transparent">
-                Všetko, čo potrebujete
+                {t.features.title1}
               </span>
-              <span className="block text-cream-50 mt-2">na tvorbu pútavých videí</span>
+              <span className="block text-cream-50 mt-2">{t.features.title2}</span>
             </h2>
             <p className="text-lg text-cinema-subtle">
-              Výkonné AI nástroje pracujúce v harmónii na premenu vašej kreatívnej vízie na realitu.
+              {t.features.description}
             </p>
           </div>
 
@@ -282,6 +422,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
             {features.map((feature, index) => {
               const Icon = feature.icon;
+              const featureData = t.features.items[index];
               return (
                 <div
                   id={`animate-feature-${index}`}
@@ -309,10 +450,10 @@ export default function Landing() {
 
                     {/* Content */}
                     <h3 className="text-xl font-bold text-cream-50 mb-3">
-                      {feature.title}
+                      {featureData.title}
                     </h3>
                     <p className="text-cinema-subtle leading-relaxed">
-                      {feature.description}
+                      {featureData.description}
                     </p>
                   </div>
                 </div>
@@ -336,13 +477,13 @@ export default function Landing() {
             }`}
           >
             <h2 className="text-4xl lg:text-5xl font-display font-bold mb-6 text-cream-50">
-              Od nápadu k videu v{' '}
+              {t.workflow.title1}{' '}
               <span className="bg-gradient-to-r from-amber-300 to-rose-400 bg-clip-text text-transparent">
-                troch krokoch
+                {t.workflow.title2}
               </span>
             </h2>
             <p className="text-lg text-cinema-subtle">
-              Náš zjednodušený pracovný postup vás prevedie od konceptu po dokončené video bez námahy.
+              {t.workflow.description}
             </p>
           </div>
 
@@ -352,7 +493,7 @@ export default function Landing() {
             <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/20 via-amber-500/50 to-amber-500/20 -translate-y-1/2" />
 
             <div className="grid lg:grid-cols-3 gap-12 lg:gap-8">
-              {workflow.map((item, index) => (
+              {t.workflow.steps.map((item, index) => (
                 <div
                   id={`animate-workflow-${index}`}
                   key={index}
@@ -367,7 +508,7 @@ export default function Landing() {
                       <div className="absolute inset-0 blur-2xl bg-amber-400/30" />
                       <div className="relative w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-glow">
                         <span className="text-2xl font-display font-bold text-cinema-black">
-                          {item.step}
+                          0{index + 1}
                         </span>
                       </div>
                     </div>
@@ -382,7 +523,7 @@ export default function Landing() {
                   </p>
 
                   {/* Arrow (desktop only, not on last item) */}
-                  {index < workflow.length - 1 && (
+                  {index < t.workflow.steps.length - 1 && (
                     <div className="hidden lg:block absolute top-8 -right-12 text-amber-500/30">
                       <ArrowRightIcon className="w-8 h-8" />
                     </div>
@@ -410,15 +551,14 @@ export default function Landing() {
             {/* Content */}
             <div className="relative z-10 space-y-8">
               <h2 className="text-4xl lg:text-5xl font-display font-bold">
-                <span className="block text-cream-50 mb-2">Pripravení tvoriť?</span>
+                <span className="block text-cream-50 mb-2">{t.cta.title1}</span>
                 <span className="bg-gradient-to-r from-amber-300 to-rose-400 bg-clip-text text-transparent">
-                  Začnite svoj prvý projekt dnes
+                  {t.cta.title2}
                 </span>
               </h2>
 
               <p className="text-lg text-cinema-subtle max-w-2xl mx-auto">
-                Pridajte sa k tisíckam tvorcov používajúcich CineGen na oživenie svojich príbehov.
-                Prineste si vlastné API kľúče a začnite generovať videá za pár minút.
+                {t.cta.description}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
@@ -427,7 +567,7 @@ export default function Landing() {
                   className="group relative px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-cinema-black font-bold rounded-xl overflow-hidden shadow-glow-lg hover:shadow-glow transition-all"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
-                    Začať zdarma
+                    {t.cta.button1}
                     <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -437,7 +577,7 @@ export default function Landing() {
                   to="/login"
                   className="px-10 py-4 border-2 border-cinema-border hover:border-amber-500/50 text-cream-50 font-bold rounded-xl transition-all"
                 >
-                  Prihlásiť sa
+                  {t.cta.button2}
                 </Link>
               </div>
             </div>
@@ -459,14 +599,14 @@ export default function Landing() {
 
             {/* Links */}
             <div className="flex items-center gap-8 text-sm text-cinema-subtle">
-              <a href="#features" className="hover:text-cream-50 transition-colors">Funkcie</a>
-              <a href="#how-it-works" className="hover:text-cream-50 transition-colors">Ako to funguje</a>
-              <Link to="/help" className="hover:text-cream-50 transition-colors">Pomoc</Link>
+              <a href="#features" className="hover:text-cream-50 transition-colors">{t.footer.features}</a>
+              <a href="#how-it-works" className="hover:text-cream-50 transition-colors">{t.footer.howItWorks}</a>
+              <Link to="/help" className="hover:text-cream-50 transition-colors">{t.footer.help}</Link>
             </div>
 
             {/* Copyright */}
             <div className="text-sm text-cinema-muted">
-              © 2024 CineGen. Všetky práva vyhradené.
+              {t.footer.copyright}
             </div>
           </div>
         </div>
