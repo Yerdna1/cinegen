@@ -7,11 +7,81 @@
 
 const crypto = require('crypto');
 
+// Decryption helper for user API keys stored in database
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const ALGORITHM = 'aes-256-gcm';
+
+function decrypt(encryptedData) {
+  const parts = encryptedData.split(':');
+  const iv = Buffer.from(parts[0], 'hex');
+  const authTag = Buffer.from(parts[1], 'hex');
+  const encrypted = parts[2];
+  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
+
 class KlingService {
   constructor() {
-    this.accessKey = process.env.KLING_ACCESS_KEY;
-    this.secretKey = process.env.KLING_SECRET_KEY;
+    this.defaultAccessKey = process.env.KLING_ACCESS_KEY;
+    this.defaultSecretKey = process.env.KLING_SECRET_KEY;
     this.baseUrl = 'https://api.klingai.com';
+    // These will be set per-request when using user keys
+    this.accessKey = this.defaultAccessKey;
+    this.secretKey = this.defaultSecretKey;
+  }
+
+  /**
+   * Get user's Kling API keys from database or fall back to environment
+   * @param {object} prisma - Prisma client
+   * @param {string} userId - User ID
+   */
+  async getUserApiKeys(prisma, userId) {
+    let accessKey = this.defaultAccessKey;
+    let secretKey = this.defaultSecretKey;
+
+    if (prisma && userId) {
+      try {
+        const [accessKeyRecord, secretKeyRecord] = await Promise.all([
+          prisma.apiKey.findFirst({
+            where: { userId, provider: 'kling' }
+          }),
+          prisma.apiKey.findFirst({
+            where: { userId, provider: 'kling-secret' }
+          })
+        ]);
+
+        if (accessKeyRecord) {
+          accessKey = decrypt(accessKeyRecord.encryptedKey);
+        }
+        if (secretKeyRecord) {
+          secretKey = decrypt(secretKeyRecord.encryptedKey);
+        }
+      } catch (error) {
+        console.warn('Failed to get Kling keys from database:', error.message);
+      }
+    }
+
+    return { accessKey, secretKey };
+  }
+
+  /**
+   * Set keys for current request (used when making user-specific requests)
+   */
+  setKeys(accessKey, secretKey) {
+    this.accessKey = accessKey || this.defaultAccessKey;
+    this.secretKey = secretKey || this.defaultSecretKey;
+  }
+
+  /**
+   * Reset to default environment keys
+   */
+  resetKeys() {
+    this.accessKey = this.defaultAccessKey;
+    this.secretKey = this.defaultSecretKey;
   }
 
   /**

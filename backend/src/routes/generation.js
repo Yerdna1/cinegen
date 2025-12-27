@@ -204,6 +204,16 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
           error: 'NanoBanana API key not configured. Please add it in Settings.'
         });
       }
+    } else if (providerName === 'kling') {
+      // Get user-specific Kling keys from database
+      const { accessKey, secretKey } = await imageService.getUserApiKeys(prisma, req.user.id);
+      if (!accessKey || !secretKey) {
+        return res.status(400).json({
+          error: 'Kling API keys not configured. Please add them in Settings.'
+        });
+      }
+      // Set the keys for this request
+      imageService.setKeys(accessKey, secretKey);
     }
 
     // Collect character reference images for consistency
