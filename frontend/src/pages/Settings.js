@@ -12,10 +12,11 @@ export default function Settings() {
     defaultLlmProvider: 'anthropic',
     defaultImageProvider: 'kling',
     defaultVoiceProvider: 'elevenlabs',
-    modalLlmEndpoint: '',
-    modalImageEndpoint: '',
-    modalF5ttsEndpoint: '',
-    modalChatterboxEndpoint: ''
+    modalChatterboxEndpoint: '',
+    modalCoquiTtsEndpoint: '',
+    modalHallo3Endpoint: '',
+    modalMusicEndpoint: '',
+    modalFileS3Endpoint: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
@@ -46,8 +47,8 @@ export default function Settings() {
 
   const voiceProviderOptions = [
     { id: 'elevenlabs', name: 'ElevenLabs', description: 'High-quality AI voices' },
-    { id: 'modal-f5tts', name: 'F5-TTS (Modal)', description: 'Self-hosted on Modal.com' },
-    { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', description: 'Self-hosted on Modal.com' }
+    { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', description: 'Self-hosted on Modal.com' },
+    { id: 'modal-coqui', name: 'Coqui TTS (Modal)', description: 'Self-hosted on Modal.com' }
   ];
 
   useEffect(() => {
@@ -251,52 +252,68 @@ export default function Settings() {
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold mb-4">Modal.com Endpoints</h2>
         <p className="text-sm text-gray-500 mb-6">
-          Configure your self-hosted Modal.com endpoints for AI services. These are used when Modal providers are selected.
+          Configure your self-hosted Modal.com endpoints. These are your deployed apps from Modal.
         </p>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">LLM Endpoint (Qwen)</label>
-            <input
-              type="text"
-              value={preferences.modalLlmEndpoint || ''}
-              onChange={(e) => updatePreference('modalLlmEndpoint', e.target.value)}
-              placeholder="https://your-username--qwen-serve.modal.run"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Image Endpoint (Flux)</label>
-            <input
-              type="text"
-              value={preferences.modalImageEndpoint || ''}
-              onChange={(e) => updatePreference('modalImageEndpoint', e.target.value)}
-              placeholder="https://your-username--flux-image-serve.modal.run"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">F5-TTS Endpoint</label>
-            <input
-              type="text"
-              value={preferences.modalF5ttsEndpoint || ''}
-              onChange={(e) => updatePreference('modalF5ttsEndpoint', e.target.value)}
-              placeholder="https://your-username--f5-tts-serve.modal.run"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Chatterbox Endpoint</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Chatterbox TTS</label>
             <input
               type="text"
               value={preferences.modalChatterboxEndpoint || ''}
               onChange={(e) => updatePreference('modalChatterboxEndpoint', e.target.value)}
-              placeholder="https://your-username--chatterbox-tts-serve.modal.run"
+              placeholder="https://username--chatterbox-tts-generator-generate.modal.run"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
+            <p className="text-xs text-gray-400 mt-1">Text-to-speech with emotional expression</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Coqui TTS</label>
+            <input
+              type="text"
+              value={preferences.modalCoquiTtsEndpoint || ''}
+              onChange={(e) => updatePreference('modalCoquiTtsEndpoint', e.target.value)}
+              placeholder="https://username--coqui-tts-generator-generate.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">Open-source text-to-speech</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hallo3 (Lip Sync / Avatar)</label>
+            <input
+              type="text"
+              value={preferences.modalHallo3Endpoint || ''}
+              onChange={(e) => updatePreference('modalHallo3Endpoint', e.target.value)}
+              placeholder="https://username--hallo3-portrait-avatar-generate.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">Portrait animation and lip sync</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Music Generator</label>
+            <input
+              type="text"
+              value={preferences.modalMusicEndpoint || ''}
+              onChange={(e) => updatePreference('modalMusicEndpoint', e.target.value)}
+              placeholder="https://username--music-generator-generate.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">AI music generation</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">File to S3</label>
+            <input
+              type="text"
+              value={preferences.modalFileS3Endpoint || ''}
+              onChange={(e) => updatePreference('modalFileS3Endpoint', e.target.value)}
+              placeholder="https://username--file-to-s3-upload.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">File storage utility</p>
           </div>
 
           <button

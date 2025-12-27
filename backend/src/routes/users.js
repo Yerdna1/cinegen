@@ -172,10 +172,12 @@ router.get('/preferences', async (req, res, next) => {
         defaultLlmProvider: preferences.defaultLlmProvider,
         defaultImageProvider: preferences.defaultImageProvider,
         defaultVoiceProvider: preferences.defaultVoiceProvider,
-        modalLlmEndpoint: preferences.modalLlmEndpoint,
-        modalImageEndpoint: preferences.modalImageEndpoint,
-        modalF5ttsEndpoint: preferences.modalF5ttsEndpoint,
-        modalChatterboxEndpoint: preferences.modalChatterboxEndpoint
+        // Modal.com endpoints
+        modalChatterboxEndpoint: preferences.modalChatterboxEndpoint,
+        modalCoquiTtsEndpoint: preferences.modalCoquiTtsEndpoint,
+        modalHallo3Endpoint: preferences.modalHallo3Endpoint,
+        modalMusicEndpoint: preferences.modalMusicEndpoint,
+        modalFileS3Endpoint: preferences.modalFileS3Endpoint
       }
     });
   } catch (error) {
@@ -191,16 +193,17 @@ router.put('/preferences', async (req, res, next) => {
       defaultLlmProvider,
       defaultImageProvider,
       defaultVoiceProvider,
-      modalLlmEndpoint,
-      modalImageEndpoint,
-      modalF5ttsEndpoint,
-      modalChatterboxEndpoint
+      modalChatterboxEndpoint,
+      modalCoquiTtsEndpoint,
+      modalHallo3Endpoint,
+      modalMusicEndpoint,
+      modalFileS3Endpoint
     } = req.body;
 
     // Validate providers
     const validLlmProviders = ['anthropic', 'modal'];
     const validImageProviders = ['kling', 'piapi', 'nanobanana', 'modal'];
-    const validVoiceProviders = ['elevenlabs', 'modal-f5tts', 'modal-chatterbox'];
+    const validVoiceProviders = ['elevenlabs', 'modal-chatterbox', 'modal-coqui'];
 
     if (defaultLlmProvider && !validLlmProviders.includes(defaultLlmProvider)) {
       return res.status(400).json({ error: 'Invalid LLM provider' });
@@ -217,10 +220,11 @@ router.put('/preferences', async (req, res, next) => {
     if (defaultLlmProvider !== undefined) updateData.defaultLlmProvider = defaultLlmProvider;
     if (defaultImageProvider !== undefined) updateData.defaultImageProvider = defaultImageProvider;
     if (defaultVoiceProvider !== undefined) updateData.defaultVoiceProvider = defaultVoiceProvider;
-    if (modalLlmEndpoint !== undefined) updateData.modalLlmEndpoint = modalLlmEndpoint;
-    if (modalImageEndpoint !== undefined) updateData.modalImageEndpoint = modalImageEndpoint;
-    if (modalF5ttsEndpoint !== undefined) updateData.modalF5ttsEndpoint = modalF5ttsEndpoint;
     if (modalChatterboxEndpoint !== undefined) updateData.modalChatterboxEndpoint = modalChatterboxEndpoint;
+    if (modalCoquiTtsEndpoint !== undefined) updateData.modalCoquiTtsEndpoint = modalCoquiTtsEndpoint;
+    if (modalHallo3Endpoint !== undefined) updateData.modalHallo3Endpoint = modalHallo3Endpoint;
+    if (modalMusicEndpoint !== undefined) updateData.modalMusicEndpoint = modalMusicEndpoint;
+    if (modalFileS3Endpoint !== undefined) updateData.modalFileS3Endpoint = modalFileS3Endpoint;
 
     const preferences = await prisma.userPreferences.upsert({
       where: { userId: req.user.id },
@@ -237,10 +241,11 @@ router.put('/preferences', async (req, res, next) => {
         defaultLlmProvider: preferences.defaultLlmProvider,
         defaultImageProvider: preferences.defaultImageProvider,
         defaultVoiceProvider: preferences.defaultVoiceProvider,
-        modalLlmEndpoint: preferences.modalLlmEndpoint,
-        modalImageEndpoint: preferences.modalImageEndpoint,
-        modalF5ttsEndpoint: preferences.modalF5ttsEndpoint,
-        modalChatterboxEndpoint: preferences.modalChatterboxEndpoint
+        modalChatterboxEndpoint: preferences.modalChatterboxEndpoint,
+        modalCoquiTtsEndpoint: preferences.modalCoquiTtsEndpoint,
+        modalHallo3Endpoint: preferences.modalHallo3Endpoint,
+        modalMusicEndpoint: preferences.modalMusicEndpoint,
+        modalFileS3Endpoint: preferences.modalFileS3Endpoint
       }
     });
   } catch (error) {

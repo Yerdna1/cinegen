@@ -11,11 +11,14 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // Modal.com endpoints configuration
+// Based on actual deployed apps from: modal app list
+// Apps: music-generator, chatterbox-tts-generator, hallo3-portrait-avatar, file-to-s3, coqui-tts-generator
 const MODAL_ENDPOINTS = {
-  llm: 'https://andrejgalad--qwen-tts-serve.modal.run',
-  image: 'https://andrejgalad--flux-image-serve.modal.run',
-  f5tts: 'https://andrejgalad--f5-tts-serve.modal.run',
-  chatterbox: 'https://andrejgalad--chatterbox-tts-serve.modal.run'
+  chatterbox: 'https://andrejgalad--chatterbox-tts-generator-generate.modal.run',
+  coquiTts: 'https://andrejgalad--coqui-tts-generator-generate.modal.run',
+  hallo3: 'https://andrejgalad--hallo3-portrait-avatar-generate.modal.run',
+  music: 'https://andrejgalad--music-generator-generate.modal.run',
+  fileS3: 'https://andrejgalad--file-to-s3-upload.modal.run'
 };
 
 // Users to pre-configure with Modal.com defaults
@@ -23,13 +26,14 @@ const PRECONFIGURED_USERS = [
   {
     email: 'andrejgalad@gmail.com',
     preferences: {
-      defaultLlmProvider: 'modal',
-      defaultImageProvider: 'modal',
-      defaultVoiceProvider: 'modal-f5tts',
-      modalLlmEndpoint: MODAL_ENDPOINTS.llm,
-      modalImageEndpoint: MODAL_ENDPOINTS.image,
-      modalF5ttsEndpoint: MODAL_ENDPOINTS.f5tts,
-      modalChatterboxEndpoint: MODAL_ENDPOINTS.chatterbox
+      defaultLlmProvider: 'anthropic',
+      defaultImageProvider: 'kling',
+      defaultVoiceProvider: 'modal-chatterbox',
+      modalChatterboxEndpoint: MODAL_ENDPOINTS.chatterbox,
+      modalCoquiTtsEndpoint: MODAL_ENDPOINTS.coquiTts,
+      modalHallo3Endpoint: MODAL_ENDPOINTS.hallo3,
+      modalMusicEndpoint: MODAL_ENDPOINTS.music,
+      modalFileS3Endpoint: MODAL_ENDPOINTS.fileS3
     }
   }
 ];
@@ -73,10 +77,11 @@ async function main() {
     console.log(`    - LLM Provider: ${userConfig.preferences.defaultLlmProvider}`);
     console.log(`    - Image Provider: ${userConfig.preferences.defaultImageProvider}`);
     console.log(`    - Voice Provider: ${userConfig.preferences.defaultVoiceProvider}`);
-    console.log(`    - Modal LLM Endpoint: ${userConfig.preferences.modalLlmEndpoint}`);
-    console.log(`    - Modal Image Endpoint: ${userConfig.preferences.modalImageEndpoint}`);
-    console.log(`    - Modal F5-TTS Endpoint: ${userConfig.preferences.modalF5ttsEndpoint}`);
-    console.log(`    - Modal Chatterbox Endpoint: ${userConfig.preferences.modalChatterboxEndpoint}`);
+    console.log(`    - Modal Chatterbox: ${userConfig.preferences.modalChatterboxEndpoint}`);
+    console.log(`    - Modal Coqui TTS: ${userConfig.preferences.modalCoquiTtsEndpoint}`);
+    console.log(`    - Modal Hallo3: ${userConfig.preferences.modalHallo3Endpoint}`);
+    console.log(`    - Modal Music: ${userConfig.preferences.modalMusicEndpoint}`);
+    console.log(`    - Modal File S3: ${userConfig.preferences.modalFileS3Endpoint}`);
   }
 
   console.log('\nSeed completed!');
