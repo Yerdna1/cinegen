@@ -629,24 +629,32 @@ export default function ProjectWizard() {
               <p className="text-gray-500">No scenes generated yet.</p>
             ) : (
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                {scenes.map((scene, index) => (
-                  <SceneCard
-                    key={scene.id}
-                    scene={scene}
-                    index={index}
-                    projectId={projectId}
-                    onUpdate={(updatedScene) => {
-                      setScenes(scenes.map(s =>
-                        s.id === updatedScene.id ? updatedScene : s
-                      ));
-                    }}
-                    onMoveUp={() => moveScene(index, index - 1)}
-                    onMoveDown={() => moveScene(index, index + 1)}
-                    onDelete={() => deleteScene(scene.id)}
-                    isFirst={index === 0}
-                    isLast={index === scenes.length - 1}
-                  />
-                ))}
+                {scenes.map((scene, index) => {
+                  // Get the first assigned voice for audio generation
+                  const assignedVoices = Object.entries(formData.voiceAssignments);
+                  const firstVoice = assignedVoices.length > 0 ? assignedVoices[0][1] : null;
+
+                  return (
+                    <SceneCard
+                      key={scene.id}
+                      scene={scene}
+                      index={index}
+                      projectId={projectId}
+                      onUpdate={(updatedScene) => {
+                        setScenes(scenes.map(s =>
+                          s.id === updatedScene.id ? updatedScene : s
+                        ));
+                      }}
+                      onMoveUp={() => moveScene(index, index - 1)}
+                      onMoveDown={() => moveScene(index, index + 1)}
+                      onDelete={() => deleteScene(scene.id)}
+                      isFirst={index === 0}
+                      isLast={index === scenes.length - 1}
+                      voiceId={firstVoice}
+                      voiceProvider={formData.voiceProvider}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
