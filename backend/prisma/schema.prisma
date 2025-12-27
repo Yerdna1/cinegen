@@ -29,7 +29,7 @@ model User {
 model ApiKey {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
-  provider     String   // hailuo, kling, nanobanana, 11labs
+  provider     String   // hailuo, kling, nanobanana, 11labs, anthropic, modal
   encryptedKey String   @map("encrypted_key")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -66,6 +66,8 @@ model Project {
   genre           String?
   setting         String?
   plot            String?
+  llmProvider     String?  @default("anthropic") @map("llm_provider") // anthropic, modal
+  imageProvider   String?  @default("kling") @map("image_provider") // kling, nanobanana, piapi, modal
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -94,20 +96,22 @@ model ProjectCharacter {
 }
 
 model Scene {
-  id             String   @id @default(uuid())
-  projectId      String   @map("project_id")
-  sequenceNumber Int      @map("sequence_number")
-  dialogue       String?
-  cameraAngle    String?  @map("camera_angle")
-  emotions       String?
-  actions        String?
-  startImageUrl  String?  @map("start_image_url")
-  endImageUrl    String?  @map("end_image_url")
-  videoUrl       String?  @map("video_url")
-  audioUrl       String?  @map("audio_url")
-  status         String   @default("PENDING") // PENDING, GENERATING, COMPLETE, FAILED
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  projectId        String   @map("project_id")
+  sequenceNumber   Int      @map("sequence_number")
+  dialogue         String?
+  cameraAngle      String?  @map("camera_angle")
+  emotions         String?
+  actions          String?
+  startImagePrompt String?  @map("start_image_prompt")
+  endImagePrompt   String?  @map("end_image_prompt")
+  startImageUrl    String?  @map("start_image_url")
+  endImageUrl      String?  @map("end_image_url")
+  videoUrl         String?  @map("video_url")
+  audioUrl         String?  @map("audio_url")
+  status           String   @default("PENDING") // PENDING, GENERATING, COMPLETE, FAILED
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
