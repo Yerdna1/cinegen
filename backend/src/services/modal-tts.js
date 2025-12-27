@@ -9,24 +9,50 @@
 class ModalTTSService {
   constructor() {
     this.apiKey = process.env.MODAL_API_KEY;
-    this.f5ttsEndpoint = process.env.MODAL_F5TTS_ENDPOINT;
-    this.chatterboxEndpoint = process.env.MODAL_CHATTERBOX_ENDPOINT;
+    this.defaultF5ttsEndpoint = process.env.MODAL_F5TTS_ENDPOINT;
+    this.defaultChatterboxEndpoint = process.env.MODAL_CHATTERBOX_ENDPOINT;
+  }
+
+  /**
+   * Get user's Modal TTS endpoint from database
+   * @param {object} prisma - Prisma client
+   * @param {string} userId - User ID
+   * @param {string} model - 'f5tts' or 'chatterbox'
+   * @returns {Promise<string|null>} User's endpoint or default
+   */
+  async getUserEndpoint(prisma, userId, model = 'chatterbox') {
+    if (prisma && userId) {
+      const prefs = await prisma.userPreferences.findUnique({
+        where: { userId }
+      });
+      if (prefs) {
+        if (model === 'chatterbox' && prefs.modalChatterboxEndpoint) {
+          return prefs.modalChatterboxEndpoint;
+        }
+        if (model === 'f5tts' && prefs.modalCoquiTtsEndpoint) {
+          return prefs.modalCoquiTtsEndpoint;
+        }
+      }
+    }
+    // Fall back to environment variables
+    return model === 'chatterbox' ? this.defaultChatterboxEndpoint : this.defaultF5ttsEndpoint;
   }
 
   /**
    * Get available voices for a specific model
    * @param {string} model - 'f5tts' or 'chatterbox'
+   * @param {string} endpoint - Optional endpoint URL (if not provided, uses default)
    */
-  async getVoices(model = 'f5tts') {
-    const endpoint = model === 'chatterbox' ? this.chatterboxEndpoint : this.f5ttsEndpoint;
+  async getVoices(model = 'f5tts', endpoint = null) {
+    const ep = endpoint || (model === 'chatterbox' ? this.defaultChatterboxEndpoint : this.defaultF5ttsEndpoint);
 
-    if (!endpoint) {
+    if (!ep) {
       // Return default/built-in voices when endpoint not configured
       return this.getDefaultVoices(model);
     }
 
     try {
-      const response = await fetch(`${endpoint}/voices`, {
+      const response = await fetch(`${ep}/voices`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -75,13 +101,14 @@ class ModalTTSService {
 
   /**
    * Generate speech using F5-TTS
+   * @param {string} endpoint - Endpoint URL
    * @param {string} voiceId - Voice identifier
    * @param {string} text - Text to synthesize
    * @param {object} options - Generation options
    */
-  async generateSpeechF5TTS(voiceId, text, options = {}) {
-    if (!this.f5ttsEndpoint) {
-      throw new Error('F5-TTS endpoint not configured');
+  async generateSpeechF5TTS(endpoint, voiceId, text, options = {}) {
+    if (!endpoint) {
+      throw new Error('F5-TTS endpoint not configured. Please add it in Settings.');
     }
 
     const {
@@ -99,7 +126,7 @@ class ModalTTSService {
       body.reference_audio = referenceAudio;
     }
 
-    const response = await fetch(`${this.f5ttsEndpoint}/generate`, {
+    const response = await fetch(`${endpoint}/generate`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
@@ -143,13 +170,14 @@ class ModalTTSService {
 
   /**
    * Generate speech using Chatterbox
+   * @param {string} endpoint - Endpoint URL
    * @param {string} voiceId - Voice identifier
    * @param {string} text - Text to synthesize
    * @param {object} options - Generation options
    */
-  async generateSpeechChatterbox(voiceId, text, options = {}) {
-    if (!this.chatterboxEndpoint) {
-      throw new Error('Chatterbox endpoint not configured');
+  async generateSpeechChatterbox(endpoint, voiceId, text, options = {}) {
+    if (!endpoint) {
+      throw new Error('Chatterbox endpoint not configured. Please add it in Settings.');
     }
 
     const {
@@ -164,7 +192,7 @@ class ModalTTSService {
       speed
     };
 
-    const response = await fetch(`${this.chatterboxEndpoint}/generate`, {
+    const response = await fetch(`${endpoint}/generate`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
@@ -209,25 +237,25 @@ class ModalTTSService {
   /**
    * Generate speech using the specified model
    * @param {string} model - 'f5tts' or 'chatterbox'
+   * @param {string} endpoint - Endpoint URL
    * @param {string} voiceId - Voice identifier
    * @param {string} text - Text to synthesize
    * @param {object} options - Generation options
    */
-  async generateSpeech(model, voiceId, text, options = {}) {
+  async generateSpeech(model, endpoint, voiceId, text, options = {}) {
     if (model === 'chatterbox') {
-      return this.generateSpeechChatterbox(voiceId, text, options);
+      return this.generateSpeechChatterbox(endpoint, voiceId, text, options);
     }
-    return this.generateSpeechF5TTS(voiceId, text, options);
+    return this.generateSpeechF5TTS(endpoint, voiceId, text, options);
   }
 
   /**
    * Check task status for async generation
    * @param {string} model - 'f5tts' or 'chatterbox'
+   * @param {string} endpoint - Endpoint URL
    * @param {string} taskId - Task ID to check
    */
-  async getTaskStatus(model, taskId) {
-    const endpoint = model === 'chatterbox' ? this.chatterboxEndpoint : this.f5ttsEndpoint;
-
+  async getTaskStatus(model, endpoint, taskId) {
     if (!endpoint) {
       throw new Error(`${model} endpoint not configured`);
     }
@@ -248,9 +276,10 @@ class ModalTTSService {
   /**
    * Test API connection
    * @param {string} model - 'f5tts' or 'chatterbox'
+   * @param {string} endpoint - Optional endpoint to test (falls back to default)
    */
-  async testConnection(model = 'f5tts') {
-    const endpoint = model === 'chatterbox' ? this.chatterboxEndpoint : this.f5ttsEndpoint;
+  async testConnection(model = 'f5tts', endpoint = null) {
+    const ep = endpoint || (model === 'chatterbox' ? this.defaultChatterboxEndpoint : this.defaultF5ttsEndpoint);
 
     try {
       if (!this.apiKey) {
@@ -258,11 +287,11 @@ class ModalTTSService {
           success: false,
           message: 'Missing Modal API key',
           hasApiKey: false,
-          hasEndpoint: !!endpoint
+          hasEndpoint: !!ep
         };
       }
 
-      if (!endpoint) {
+      if (!ep) {
         return {
           success: false,
           message: `${model} endpoint not configured`,
@@ -272,7 +301,7 @@ class ModalTTSService {
       }
 
       // Try to fetch voices as a health check
-      const response = await fetch(`${endpoint}/health`, {
+      const response = await fetch(`${ep}/health`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`
         }

@@ -70,7 +70,7 @@ async function getVoices(providerName, options = {}) {
  * @param {string} providerName - Provider name
  * @param {string} voiceId - Voice ID
  * @param {string} text - Text to synthesize
- * @param {object} options - Generation options (apiKey, emotion, speed, etc.)
+ * @param {object} options - Generation options (apiKey, endpoint, emotion, speed, etc.)
  */
 async function generateSpeech(providerName, voiceId, text, options = {}) {
   const provider = getTTSProvider(providerName);
@@ -92,9 +92,14 @@ async function generateSpeech(providerName, voiceId, text, options = {}) {
     };
   }
 
-  // Modal providers
+  // Modal providers - requires endpoint
+  if (!options.endpoint) {
+    throw new Error(`${providerName} endpoint not configured. Please add it in Settings.`);
+  }
+
   const result = await provider.service.generateSpeech(
     provider.model,
+    options.endpoint,
     voiceId,
     text,
     options

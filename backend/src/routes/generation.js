@@ -180,6 +180,17 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
     const providerName = overrideProvider || project.imageProvider || 'kling';
     const imageService = getImageProvider(providerName);
 
+    // Get endpoint/API key for the image provider
+    let imageEndpoint = null;
+    if (providerName === 'modal') {
+      imageEndpoint = await imageService.getUserEndpoint(prisma, req.user.id);
+      if (!imageEndpoint) {
+        return res.status(400).json({
+          error: 'Modal image endpoint not configured. Please add it in Settings.'
+        });
+      }
+    }
+
     // Collect character reference images for consistency
     const referenceImages = project.projectCharacters
       .map(pc => pc.character.imageUrl)
@@ -196,11 +207,18 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
     // Generate start image
     if (generateStart && scene.startImagePrompt) {
       try {
-        const startImageResult = await imageService.generateImage(scene.startImagePrompt, {
-          aspectRatio: '16:9',
-          referenceImages,
-          style: 'cinematic'
-        });
+        // Modal requires endpoint as first param, others don't
+        const startImageResult = providerName === 'modal'
+          ? await imageService.generateImage(imageEndpoint, scene.startImagePrompt, {
+              aspectRatio: '16:9',
+              referenceImages,
+              style: 'cinematic'
+            })
+          : await imageService.generateImage(scene.startImagePrompt, {
+              aspectRatio: '16:9',
+              referenceImages,
+              style: 'cinematic'
+            });
         tasks.startImage = startImageResult.data?.task_id;
 
         // If synchronous result with URL
@@ -220,11 +238,18 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
     // Generate end image
     if (generateEnd && scene.endImagePrompt) {
       try {
-        const endImageResult = await imageService.generateImage(scene.endImagePrompt, {
-          aspectRatio: '16:9',
-          referenceImages,
-          style: 'cinematic'
-        });
+        // Modal requires endpoint as first param, others don't
+        const endImageResult = providerName === 'modal'
+          ? await imageService.generateImage(imageEndpoint, scene.endImagePrompt, {
+              aspectRatio: '16:9',
+              referenceImages,
+              style: 'cinematic'
+            })
+          : await imageService.generateImage(scene.endImagePrompt, {
+              aspectRatio: '16:9',
+              referenceImages,
+              style: 'cinematic'
+            });
         tasks.endImage = endImageResult.data?.task_id;
 
         // If synchronous result with URL
@@ -297,6 +322,12 @@ router.get('/projects/:id/scenes/:sceneId/image-status', async (req, res, next) 
     const providerName = project.imageProvider || 'kling';
     const imageService = getImageProvider(providerName);
 
+    // Get endpoint for Modal if needed
+    let imageEndpoint = null;
+    if (providerName === 'modal') {
+      imageEndpoint = await imageService.getUserEndpoint(prisma, req.user.id);
+    }
+
     const status = {
       sceneId: scene.id,
       sceneStatus: scene.status,
@@ -307,7 +338,9 @@ router.get('/projects/:id/scenes/:sceneId/image-status', async (req, res, next) 
     // Check task status if task IDs provided
     if (startTaskId) {
       try {
-        const startStatus = await imageService.getTaskStatus(startTaskId);
+        const startStatus = providerName === 'modal'
+          ? await imageService.getTaskStatus(imageEndpoint, startTaskId)
+          : await imageService.getTaskStatus(startTaskId);
         status.startTask = startStatus.data;
 
         // Update scene if completed
@@ -325,7 +358,9 @@ router.get('/projects/:id/scenes/:sceneId/image-status', async (req, res, next) 
 
     if (endTaskId) {
       try {
-        const endStatus = await imageService.getTaskStatus(endTaskId);
+        const endStatus = providerName === 'modal'
+          ? await imageService.getTaskStatus(imageEndpoint, endTaskId)
+          : await imageService.getTaskStatus(endTaskId);
         status.endTask = endStatus.data;
 
         // Update scene if completed
@@ -607,19 +642,32 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
       return res.status(400).json({ error: 'Voice ID is required' });
     }
 
-    // Get API key for ElevenLabs if needed
+    // Get API key for ElevenLabs or endpoint for Modal providers
     let apiKey = null;
+    let endpoint = null;
+
     if (provider === 'elevenlabs') {
       apiKey = await elevenlabsService.getUserApiKey(prisma, req.user.id);
       if (!apiKey) {
         return res.status(400).json({ error: 'ElevenLabs API key not configured' });
+      }
+    } else if (provider === 'modal-chatterbox' || provider === 'modal-f5tts' || provider === 'modal-coqui') {
+      // Get Modal TTS endpoint from user preferences
+      const modalTTSService = require('../services/modal-tts');
+      const model = provider === 'modal-chatterbox' ? 'chatterbox' : 'f5tts';
+      endpoint = await modalTTSService.getUserEndpoint(prisma, req.user.id, model);
+      if (!endpoint) {
+        return res.status(400).json({
+          error: `${provider} endpoint not configured. Please add it in Settings.`
+        });
       }
     }
 
     // Generate speech
     const result = await generateSpeech(provider, voice, scene.dialogue, {
       ...options,
-      apiKey
+      apiKey,
+      endpoint
     });
 
     // If we got audio data, save it
@@ -711,6 +759,19 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
       elevenlabsApiKey = await elevenlabsService.getUserApiKey(prisma, req.user.id);
     }
 
+    // Get Modal TTS endpoints if needed
+    const modalTTSService = require('../services/modal-tts');
+    let chatterboxEndpoint = null;
+    let f5ttsEndpoint = null;
+    const needsChatterbox = project.projectCharacters.some(pc => pc.voiceProvider === 'modal-chatterbox');
+    const needsF5tts = project.projectCharacters.some(pc => pc.voiceProvider === 'modal-f5tts' || pc.voiceProvider === 'modal-coqui');
+    if (needsChatterbox) {
+      chatterboxEndpoint = await modalTTSService.getUserEndpoint(prisma, req.user.id, 'chatterbox');
+    }
+    if (needsF5tts) {
+      f5ttsEndpoint = await modalTTSService.getUserEndpoint(prisma, req.user.id, 'f5tts');
+    }
+
     // Default voice if no character match
     const defaultVoice = project.projectCharacters[0] || null;
     const defaultVoiceProvider = defaultVoice?.voiceProvider || project.voiceProvider || 'elevenlabs';
@@ -744,14 +805,26 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
         const voiceId = defaultVoiceId;
 
         let apiKey = null;
+        let endpoint = null;
+
         if (voiceProvider === 'elevenlabs') {
           apiKey = elevenlabsApiKey;
           if (!apiKey) {
             throw new Error('ElevenLabs API key not configured');
           }
+        } else if (voiceProvider === 'modal-chatterbox') {
+          endpoint = chatterboxEndpoint;
+          if (!endpoint) {
+            throw new Error('Chatterbox endpoint not configured. Please add it in Settings.');
+          }
+        } else if (voiceProvider === 'modal-f5tts' || voiceProvider === 'modal-coqui') {
+          endpoint = f5ttsEndpoint;
+          if (!endpoint) {
+            throw new Error('F5-TTS/Coqui endpoint not configured. Please add it in Settings.');
+          }
         }
 
-        const result = await generateSpeech(voiceProvider, voiceId, scene.dialogue, { apiKey });
+        const result = await generateSpeech(voiceProvider, voiceId, scene.dialogue, { apiKey, endpoint });
 
         let audioUrl = result.audioUrl;
 
