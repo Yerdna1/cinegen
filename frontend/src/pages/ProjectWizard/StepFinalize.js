@@ -26,10 +26,13 @@ export default function StepFinalize({ projectId, scenes }) {
   });
   const [exporting, setExporting] = useState(false);
   const [backgroundMusicTracks, setBackgroundMusicTracks] = useState([]);
+  const [finalVideoUrl, setFinalVideoUrl] = useState(null);
+  const [loadingFinalVideo, setLoadingFinalVideo] = useState(true);
 
   useEffect(() => {
     fetchBackgroundMusic();
-  }, []);
+    fetchFinalVideo();
+  }, [projectId]);
 
   const fetchBackgroundMusic = async () => {
     try {
@@ -38,6 +41,21 @@ export default function StepFinalize({ projectId, scenes }) {
     } catch (error) {
       console.error('Failed to fetch background music:', error);
       setBackgroundMusicTracks([]);
+    }
+  };
+
+  const fetchFinalVideo = async () => {
+    if (!projectId) return;
+
+    try {
+      const response = await api.get(`/projects/${projectId}`);
+      if (response.data.project.finalVideoUrl) {
+        setFinalVideoUrl(response.data.project.finalVideoUrl);
+      }
+    } catch (error) {
+      console.error('Failed to fetch final video:', error);
+    } finally {
+      setLoadingFinalVideo(false);
     }
   };
 
@@ -72,9 +90,12 @@ export default function StepFinalize({ projectId, scenes }) {
       });
 
       if (response.data.videoUrl) {
+        // Update state with new final video URL
+        setFinalVideoUrl(response.data.videoUrl);
+
         // Download the final video
         window.open(response.data.videoUrl, '_blank');
-        toast.success('Final video rendered successfully!');
+        toast.success('Final video rendered successfully! You can now view it below.');
       } else {
         toast.success(response.data.message || 'Video rendering started');
       }
@@ -500,6 +521,45 @@ export default function StepFinalize({ projectId, scenes }) {
           </div>
         </div>
       </div>
+
+      {/* Final Rendered Video Section */}
+      {finalVideoUrl && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-100 border border-green-200 rounded-lg overflow-hidden">
+          <div className="px-4 py-3 border-b border-green-200 bg-green-100">
+            <h4 className="font-medium text-green-900 flex items-center gap-2">
+              <SparklesIcon className="w-5 h-5" />
+              Final Rendered Video
+            </h4>
+          </div>
+          <div className="p-4">
+            <div className="aspect-video bg-black rounded-lg overflow-hidden mb-3">
+              <video
+                src={finalVideoUrl}
+                controls
+                className="w-full h-full"
+              />
+            </div>
+            <div className="flex gap-2">
+              <a
+                href={finalVideoUrl}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <ArrowDownTrayIcon className="w-4 h-4" />
+                Download Final Video
+              </a>
+              <button
+                onClick={() => window.open(finalVideoUrl, '_blank')}
+                className="px-4 py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors"
+              >
+                Open in New Tab
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Export Options */}
       <div className="bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200 rounded-lg p-6">

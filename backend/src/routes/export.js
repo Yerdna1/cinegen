@@ -288,10 +288,13 @@ router.post('/projects/:id/render-final', async (req, res, next) => {
 
     console.log(`[RenderFinal] Render complete: ${finalVideoUrl}`);
 
-    // Update project status
+    // Update project with final video URL and status
     await prisma.project.update({
       where: { id: project.id },
-      data: { status: 'COMPLETE' }
+      data: {
+        status: 'COMPLETE',
+        finalVideoUrl: finalVideoUrl
+      }
     });
 
     res.json({
@@ -301,7 +304,10 @@ router.post('/projects/:id/render-final', async (req, res, next) => {
       metadata: {
         sceneCount: project.scenes.length,
         settings,
-        duration: project.scenes.length * 6 // Approximate duration in seconds
+        duration: project.scenes.length * 6, // Approximate duration in seconds
+        hasTransitions: settings.transition !== 'none',
+        hasTitleCard: settings.addTitleCard,
+        hasCredits: settings.addCredits
       }
     });
 

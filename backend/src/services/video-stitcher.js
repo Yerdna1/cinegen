@@ -66,12 +66,22 @@ class VideoStitcher {
   async stitchVideos(scenes, settings = {}, projectName = 'project') {
     const jobId = `render_${Date.now()}`;
     const downloadedVideos = [];
+    const tempFiles = [];
 
     try {
       console.log(`[VideoStitcher] Starting render job: ${jobId}`);
       console.log(`[VideoStitcher] Scenes to stitch: ${scenes.length}`);
+      console.log(`[VideoStitcher] Settings:`, settings);
 
-      // 1. Download all scene videos
+      // 1. Create title card if requested
+      if (settings.addTitleCard && settings.titleText) {
+        console.log(`[VideoStitcher] Creating title card...`);
+        const titlePath = await this.createTitleCard(settings.titleText, 3);
+        downloadedVideos.push(titlePath);
+        tempFiles.push(titlePath);
+      }
+
+      // 2. Download all scene videos
       for (let i = 0; i < scenes.length; i++) {
         const scene = scenes[i];
         if (!scene.videoUrl) {
@@ -82,21 +92,27 @@ class VideoStitcher {
         const filename = `${jobId}_scene_${scene.sequenceNumber}.mp4`;
         const localPath = await this.downloadVideo(scene.videoUrl, filename);
         downloadedVideos.push(localPath);
+        tempFiles.push(localPath);
       }
 
-      // 2. Create concat demuxer file
-      const concatFilePath = path.join(this.tempDir, `${jobId}_concat.txt`);
-      await this.createConcatFile(downloadedVideos, concatFilePath);
-      console.log(`[VideoStitcher] Concat file created: ${concatFilePath}`);
+      // 3. Create end credits if requested
+      if (settings.addCredits && settings.creditsText) {
+        console.log(`[VideoStitcher] Creating end credits...`);
+        const creditsPath = await this.createCredits(settings.creditsText, 5);
+        downloadedVideos.push(creditsPath);
+        tempFiles.push(creditsPath);
+      }
 
-      // 3. Render final video using ffmpeg
+      // 4. Render final video using ffmpeg with transitions
       const outputFilename = `${jobId}_final.mp4`;
       const outputPath = path.join(this.tempDir, outputFilename);
 
-      await this.renderVideo(concatFilePath, outputPath, settings);
+      console.log(`[VideoStitcher] Rendering with ${settings.transition || 'no'} transitions...`);
+      await this.renderVideo(downloadedVideos, outputPath, settings);
       console.log(`[VideoStitcher] Video rendered: ${outputPath}`);
+      tempFiles.push(outputPath);
 
-      // 4. Upload to storage
+      // 5. Upload to storage
       console.log(`[VideoStitcher] Uploading to storage...`);
       const videoBuffer = fs.readFileSync(outputPath);
       const base64Video = videoBuffer.toString('base64');
@@ -111,50 +127,146 @@ class VideoStitcher {
 
       console.log(`[VideoStitcher] Upload complete: ${videoUrl}`);
 
-      // 5. Cleanup temp files
-      await this.cleanup([...downloadedVideos, concatFilePath, outputPath]);
+      // 6. Cleanup temp files
+      await this.cleanup(tempFiles);
 
       return videoUrl;
 
     } catch (error) {
       console.error('[VideoStitcher] Error:', error);
       // Cleanup on error
-      await this.cleanup([...downloadedVideos]);
+      await this.cleanup(tempFiles);
       throw error;
     }
   }
 
   /**
-   * Render video using ffmpeg
+   * Create title card video clip
    */
-  renderVideo(concatFilePath, outputPath, settings = {}) {
+  async createTitleCard(text, duration = 3) {
+    const outputPath = path.join(this.tempDir, `title_${Date.now()}.mp4`);
+
     return new Promise((resolve, reject) => {
-      let command = ffmpeg()
-        .input(concatFilePath)
-        .inputOptions(['-f concat', '-safe 0'])
+      ffmpeg()
+        .input(`color=c=black:s=1920x1080:d=${duration}`)
+        .inputOptions(['-f lavfi'])
         .outputOptions([
-          '-c:v libx264',        // H.264 codec
-          '-preset medium',      // Encoding speed/quality balance
-          '-crf 23',             // Quality (lower = better, 18-28 range)
-          '-c:a aac',            // AAC audio codec
-          '-b:a 128k',           // Audio bitrate
-          '-movflags +faststart' // Enable streaming
-        ]);
+          `-vf drawtext=text='${text.replace(/'/g, "\\'")}':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc`,
+          '-c:v libx264',
+          '-t', `${duration}`,
+          '-pix_fmt yuv420p'
+        ])
+        .output(outputPath)
+        .on('end', () => resolve(outputPath))
+        .on('error', (error) => {
+          console.error('[TitleCard] Error:', error);
+          reject(error);
+        })
+        .run();
+    });
+  }
+
+  /**
+   * Create credits video clip
+   */
+  async createCredits(text, duration = 5) {
+    const outputPath = path.join(this.tempDir, `credits_${Date.now()}.mp4`);
+
+    // Split credits text into lines and escape quotes
+    const creditsText = text.split('\n').join('\\n').replace(/'/g, "\\'");
+
+    return new Promise((resolve, reject) => {
+      ffmpeg()
+        .input(`color=c=black:s=1920x1080:d=${duration}`)
+        .inputOptions(['-f lavfi'])
+        .outputOptions([
+          `-vf drawtext=text='${creditsText}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc`,
+          '-c:v libx264',
+          '-t', `${duration}`,
+          '-pix_fmt yuv420p'
+        ])
+        .output(outputPath)
+        .on('end', () => resolve(outputPath))
+        .on('error', (error) => {
+          console.error('[Credits] Error:', error);
+          reject(error);
+        })
+        .run();
+    });
+  }
+
+  /**
+   * Render video using ffmpeg with transitions support
+   */
+  async renderVideo(videoPaths, outputPath, settings = {}) {
+    const transition = settings.transition || 'none';
+    const transitionDuration = 0.5; // 0.5 seconds
+
+    return new Promise((resolve, reject) => {
+      let command = ffmpeg();
+
+      // Add all video inputs
+      videoPaths.forEach(videoPath => {
+        command.input(videoPath);
+      });
+
+      // Build filter complex for transitions
+      let filterComplex = [];
+      let lastOutput = '[0:v]';
+
+      if (transition !== 'none' && videoPaths.length > 1) {
+        // Build xfade filter chain for transitions
+        for (let i = 0; i < videoPaths.length - 1; i++) {
+          const nextInput = `[${i + 1}:v]`;
+          const outputLabel = i === videoPaths.length - 2 ? '[outv]' : `[v${i}]`;
+
+          // Calculate offset (each video is ~6 seconds, subtract transition duration)
+          const offset = (i + 1) * 6 - transitionDuration;
+
+          const transitionType = transition === 'fade' ? 'fade' : 'dissolve';
+          filterComplex.push(
+            `${lastOutput}${nextInput}xfade=transition=${transitionType}:duration=${transitionDuration}:offset=${offset}${outputLabel}`
+          );
+
+          lastOutput = outputLabel;
+        }
+      } else {
+        // No transitions - just concatenate
+        const inputs = videoPaths.map((_, i) => `[${i}:v]`).join('');
+        filterComplex.push(`${inputs}concat=n=${videoPaths.length}:v=1:a=0[outv]`);
+      }
+
+      // Audio handling
+      const audioInputs = videoPaths.map((_, i) => `[${i}:a]`).join('');
+      filterComplex.push(`${audioInputs}concat=n=${videoPaths.length}:v=0:a=1[outa]`);
 
       // Add background music if provided
       if (settings.backgroundMusicUrl) {
-        command
-          .input(settings.backgroundMusicUrl)
-          .complexFilter([
-            // Mix dialogue and music with volume levels
-            `[0:a]volume=${(settings.dialogueVolume || 100) / 100}[dialogue]`,
-            `[1:a]volume=${(settings.musicVolume || 30) / 100}[music]`,
-            '[dialogue][music]amix=inputs=2:duration=first[aout]'
-          ])
-          .outputOptions(['-map 0:v', '-map [aout]']);
+        command.input(settings.backgroundMusicUrl);
+        const musicIndex = videoPaths.length;
+
+        filterComplex.push(
+          `[outa]volume=${(settings.dialogueVolume || 100) / 100}[dialogue]`,
+          `[${musicIndex}:a]volume=${(settings.musicVolume || 30) / 100}[music]`,
+          '[dialogue][music]amix=inputs=2:duration=first[aout]'
+        );
+      } else {
+        filterComplex.push('[outa]volume=1[aout]');
       }
 
       command
+        .complexFilter(filterComplex)
+        .outputOptions([
+          '-map [outv]',
+          '-map [aout]',
+          '-c:v libx264',
+          '-preset medium',
+          '-crf 23',
+          '-c:a aac',
+          '-b:a 128k',
+          '-movflags +faststart',
+          '-pix_fmt yuv420p'
+        ])
         .output(outputPath)
         .on('start', (commandLine) => {
           console.log('[ffmpeg] Command:', commandLine);

@@ -134,6 +134,7 @@ model Project {
   llmProvider     String?  @default("anthropic") @map("llm_provider") // anthropic, modal
   imageProvider   String?  @default("kling") @map("image_provider") // kling, nanobanana, piapi, modal
   voiceProvider   String?  @default("elevenlabs") @map("voice_provider") // elevenlabs, modal-f5tts, modal-chatterbox
+  finalVideoUrl   String?  @map("final_video_url") // URL of the final rendered video
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
