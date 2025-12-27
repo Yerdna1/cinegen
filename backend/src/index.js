@@ -267,17 +267,21 @@ app.get('/api/test/piapi/task/:taskId', async (req, res) => {
 // Error handler
 app.use(errorHandler);
 
-// Start server
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`CineGen backend running on port ${PORT}`);
-  console.log(`WebSocket server running on ws://localhost:${PORT}/ws`);
-});
+// Only start server if not running in Vercel serverless
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3001;
+  server.listen(PORT, () => {
+    console.log(`CineGen backend running on port ${PORT}`);
+    console.log(`WebSocket server running on ws://localhost:${PORT}/ws`);
+  });
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  process.exit(0);
-});
+  // Graceful shutdown
+  process.on('SIGINT', async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}
 
-module.exports = { app, prisma };
+// Export for Vercel serverless
+module.exports = app;
+module.exports.prisma = prisma;

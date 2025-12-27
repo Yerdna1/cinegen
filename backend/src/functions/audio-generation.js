@@ -7,8 +7,7 @@
 const { inngest, EVENTS } = require('../services/inngest');
 const { generateSpeech } = require('../services/tts-factory');
 const { PrismaClient } = require('@prisma/client');
-const path = require('path');
-const fs = require('fs').promises;
+const storage = require('../services/storage');
 
 // Create a Prisma client for use in Inngest functions
 const prisma = new PrismaClient();
@@ -62,16 +61,17 @@ const generateAudioFunction = inngest.createFunction(
     // Step 3: Save audio file if base64
     const audioUrl = await step.run('save-audio', async () => {
       if (audioResult.audioBase64) {
-        const uploadsDir = path.join(__dirname, '../../uploads/audio');
-        await fs.mkdir(uploadsDir, { recursive: true });
-
         const ext = audioResult.audioFormat || 'wav';
         const filename = `scene-${sceneId}-${Date.now()}.${ext}`;
-        const filepath = path.join(uploadsDir, filename);
-
-        await fs.writeFile(filepath, Buffer.from(audioResult.audioBase64, 'base64'));
-        console.log(`[Inngest] Audio saved to ${filepath}`);
-        return `/uploads/audio/${filename}`;
+        const contentType = ext === 'wav' ? 'audio/wav' : 'audio/mpeg';
+        const url = await storage.upload(
+          audioResult.audioBase64,
+          filename,
+          'audio',
+          contentType
+        );
+        console.log(`[Inngest] Audio saved to storage: ${url}`);
+        return url;
       }
       return audioResult.audioUrl;
     });

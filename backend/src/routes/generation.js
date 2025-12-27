@@ -12,6 +12,7 @@ const { getLLMProvider, getAvailableLLMProviders } = require('../services/llm-fa
 const { getImageProvider, getAvailableImageProviders } = require('../services/image-factory');
 const { getAvailableTTSProviders, getAllVoices, generateSpeech } = require('../services/tts-factory');
 const elevenlabsService = require('../services/elevenlabs');
+const storage = require('../services/storage');
 
 /**
  * GET /api/generation/providers
@@ -240,15 +241,17 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
         }
         tasks.startImage = startImageResult.data?.task_id;
 
-        // If synchronous result with base64 image, save to file
+        // If synchronous result with base64 image, save to storage
         if (startImageResult.data?.image_base64) {
-          const uploadsDir = path.join(__dirname, '../../uploads/images');
-          await fs.mkdir(uploadsDir, { recursive: true });
           const ext = startImageResult.data.format || 'png';
           const filename = `scene-${req.params.sceneId}-start-${Date.now()}.${ext}`;
-          const filepath = path.join(uploadsDir, filename);
-          await fs.writeFile(filepath, Buffer.from(startImageResult.data.image_base64, 'base64'));
-          const imageUrl = `/uploads/images/${filename}`;
+          const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+          const imageUrl = await storage.upload(
+            startImageResult.data.image_base64,
+            filename,
+            'images',
+            contentType
+          );
           await prisma.scene.update({
             where: { id: req.params.sceneId },
             data: { startImageUrl: imageUrl }
@@ -291,15 +294,17 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
         }
         tasks.endImage = endImageResult.data?.task_id;
 
-        // If synchronous result with base64 image, save to file
+        // If synchronous result with base64 image, save to storage
         if (endImageResult.data?.image_base64) {
-          const uploadsDir = path.join(__dirname, '../../uploads/images');
-          await fs.mkdir(uploadsDir, { recursive: true });
           const ext = endImageResult.data.format || 'png';
           const filename = `scene-${req.params.sceneId}-end-${Date.now()}.${ext}`;
-          const filepath = path.join(uploadsDir, filename);
-          await fs.writeFile(filepath, Buffer.from(endImageResult.data.image_base64, 'base64'));
-          const imageUrl = `/uploads/images/${filename}`;
+          const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+          const imageUrl = await storage.upload(
+            endImageResult.data.image_base64,
+            filename,
+            'images',
+            contentType
+          );
           await prisma.scene.update({
             where: { id: req.params.sceneId },
             data: { endImageUrl: imageUrl }
@@ -755,17 +760,17 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
     if (result.audioBase64 || result.audioUrl) {
       let audioUrl = result.audioUrl;
 
-      // If we have base64 audio, save it to a file
+      // If we have base64 audio, save it to storage
       if (result.audioBase64) {
-        const uploadsDir = path.join(__dirname, '../../uploads/audio');
-        await fs.mkdir(uploadsDir, { recursive: true });
-
         const ext = result.audioFormat || 'mp3';
         const filename = `scene-${scene.id}-${Date.now()}.${ext}`;
-        const filepath = path.join(uploadsDir, filename);
-
-        await fs.writeFile(filepath, Buffer.from(result.audioBase64, 'base64'));
-        audioUrl = `/uploads/audio/${filename}`;
+        const contentType = ext === 'wav' ? 'audio/wav' : 'audio/mpeg';
+        audioUrl = await storage.upload(
+          result.audioBase64,
+          filename,
+          'audio',
+          contentType
+        );
       }
 
       // Update scene with audio URL and mark complete
@@ -976,9 +981,13 @@ router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
         if (result.audioBase64) {
           const ext = result.audioFormat || 'mp3';
           const filename = `scene-${scene.id}-${Date.now()}.${ext}`;
-          const filepath = path.join(uploadsDir, filename);
-          await fs.writeFile(filepath, Buffer.from(result.audioBase64, 'base64'));
-          audioUrl = `/uploads/audio/${filename}`;
+          const contentType = ext === 'wav' ? 'audio/wav' : 'audio/mpeg';
+          audioUrl = await storage.upload(
+            result.audioBase64,
+            filename,
+            'audio',
+            contentType
+          );
         }
 
         if (audioUrl) {
@@ -1156,14 +1165,9 @@ router.post('/projects/:id/scenes/:sceneId/generate-video', async (req, res, nex
       });
     }
 
-    // Get full URLs for images (they're stored as relative paths)
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-    const startImageUrl = scene.startImageUrl.startsWith('http')
-      ? scene.startImageUrl
-      : `${backendUrl}${scene.startImageUrl}`;
-    const endImageUrl = scene.endImageUrl.startsWith('http')
-      ? scene.endImageUrl
-      : `${backendUrl}${scene.endImageUrl}`;
+    // Get full public URLs for images (handles both local and Vercel Blob URLs)
+    const startImageUrl = storage.getPublicUrl(scene.startImageUrl);
+    const endImageUrl = storage.getPublicUrl(scene.endImageUrl);
 
     // Mark scene as generating
     await prisma.scene.update({
