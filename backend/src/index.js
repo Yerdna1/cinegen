@@ -16,6 +16,7 @@ const voiceRoutes = require('./routes/voices');
 const adminRoutes = require('./routes/admin');
 const exportRoutes = require('./routes/export');
 const galleryRoutes = require('./routes/gallery');
+const generationRoutes = require('./routes/generation');
 
 // Import middleware
 const { authenticateToken } = require('./middleware/auth');
@@ -99,6 +100,7 @@ app.use('/api/projects', authenticateToken, sceneRoutes);
 app.use('/api/voices', authenticateToken, voiceRoutes);
 app.use('/api/export', authenticateToken, exportRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes);
+app.use('/api/generation', authenticateToken, generationRoutes);
 
 // Root route - API info
 app.get('/', (req, res) => {

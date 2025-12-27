@@ -118,7 +118,7 @@ router.put('/api-keys', async (req, res, next) => {
     const prisma = req.app.get('prisma');
     const { provider, apiKey } = req.body;
 
-    const validProviders = ['hailuo', 'kling', 'nanobanana', '11labs'];
+    const validProviders = ['hailuo', 'kling', 'nanobanana', '11labs', 'anthropic', 'modal'];
     if (!validProviders.includes(provider)) {
       return res.status(400).json({ error: 'Invalid provider' });
     }
