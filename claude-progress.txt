@@ -204,8 +204,21 @@ curl -X PATCH http://localhost:8765/features/{id} -H "Content-Type: application/
 ### Regression Tests Performed
 - Feature #22: Project persists after refresh - STILL PASSING
 
+2. **Feature #54 - Direct URL access with auth check** - PASSED
+   - Verified bookmarked URLs work with authentication
+   - When logged out and accessing protected URL, user redirected to login
+   - After logging in, user automatically redirected back to original URL
+   - Test verified with project URL `/projects/540bb4e4-ff01-49ee-83d8-db41cdc496fd`
+   - All steps verified:
+     - Login and navigate to project ✓
+     - Logout ✓
+     - Access bookmarked URL while logged out ✓
+     - Verify redirected to login ✓
+     - Login again ✓
+     - Verify redirected back to project ✓
+
 ### Current Progress
-- **46/95 features passing (48.4%)**
+- **47/95 features passing (49.5%)**
 
 ## Notes
 
