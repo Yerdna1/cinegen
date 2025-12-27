@@ -210,6 +210,69 @@ Generate the scene content now. Respond ONLY with valid JSON.`;
   }
 
   /**
+   * Generate video prompt for scene transition
+   * @param {object} sceneContext - Scene details including dialogue, images, etc.
+   * @param {object} projectContext - Project-level context
+   */
+  async generateVideoPrompt(sceneContext, projectContext) {
+    const prompt = `Generate a video motion prompt for transitioning between two frames in a movie scene.
+
+PROJECT CONTEXT:
+- Genre: ${projectContext.genre || 'Drama'}
+- Setting: ${projectContext.setting || 'Modern'}
+
+SCENE CONTEXT:
+- Scene Number: ${sceneContext.sequenceNumber}
+- Dialogue: ${sceneContext.dialogue || 'No dialogue'}
+- Emotions: ${sceneContext.emotions || 'neutral'}
+- Actions: ${sceneContext.actions || 'standing'}
+- Camera Angle: ${sceneContext.cameraAngle || 'medium shot'}
+
+START FRAME DESCRIPTION:
+${sceneContext.startImagePrompt || 'Opening shot of the scene'}
+
+END FRAME DESCRIPTION:
+${sceneContext.endImagePrompt || 'Closing shot of the scene'}
+
+Generate a concise video motion prompt (2-3 sentences) that describes:
+1. The camera movement (pan, zoom, dolly, static, etc.)
+2. Character movements and actions
+3. Any environmental changes (lighting, weather, etc.)
+
+The prompt should guide smooth video generation between the start and end frames.
+Respond with ONLY the video prompt text, no JSON or extra formatting.`;
+
+    try {
+      let result = null;
+
+      for await (const message of query({
+        prompt,
+        options: {
+          model: this.model,
+          maxTurns: 1,
+          systemPrompt: 'You are a professional cinematographer describing camera movements and scene transitions. Be concise and specific. Output only the video prompt, nothing else.'
+        }
+      })) {
+        if (message.type === 'result') {
+          result = message.result;
+          break;
+        }
+      }
+
+      // Clean up the result - remove any quotes or extra formatting
+      if (result) {
+        result = result.trim().replace(/^["']|["']$/g, '');
+      }
+
+      return result || 'Smooth camera movement following the action in the scene.';
+    } catch (error) {
+      console.error('Claude SDK video prompt generation error:', error);
+      // Return a default prompt on error
+      return 'Natural camera movement with subtle transitions between frames.';
+    }
+  }
+
+  /**
    * Test SDK connection
    */
   async testConnection() {

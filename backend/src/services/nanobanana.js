@@ -1,48 +1,61 @@
 /**
  * NanoBanana Pro Image Generation Service
  *
- * Uses NanoBanana API for AI image generation.
- * This service provides text-to-image capabilities with style control.
+ * Uses Google Gemini API for AI image generation.
+ * This service provides text-to-image capabilities using Gemini's image generation model.
  */
+
+const crypto = require('crypto');
+
+// Encryption for API keys (same as other services)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const ALGORITHM = 'aes-256-gcm';
+
+function decrypt(encryptedData) {
+  const parts = encryptedData.split(':');
+  const iv = Buffer.from(parts[0], 'hex');
+  const authTag = Buffer.from(parts[1], 'hex');
+  const encrypted = parts[2];
+  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
 
 class NanoBananaService {
   constructor() {
-    this.apiKey = process.env.NANOBANANA_API_KEY;
-    this.baseUrl = process.env.NANOBANANA_API_URL || 'https://api.nanobanana.com';
+    this.defaultApiKey = process.env.NANOBANANA_API_KEY;
+    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+    this.model = 'models/gemini-3-pro-image-preview';
   }
 
   /**
-   * Make authenticated request to NanoBanana API
+   * Get user's API key from database
    */
-  async request(endpoint, method = 'POST', body = null) {
-    if (!this.apiKey) {
-      throw new Error('NanoBanana API key not configured');
+  async getUserApiKey(prisma, userId) {
+    if (!prisma || !userId) {
+      return this.defaultApiKey;
     }
 
-    const options = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
+    try {
+      const apiKeyRecord = await prisma.apiKey.findFirst({
+        where: { userId, provider: 'nanobanana' }
+      });
+
+      if (apiKeyRecord) {
+        return decrypt(apiKeyRecord.encryptedKey);
       }
-    };
-
-    if (body) {
-      options.body = JSON.stringify(body);
+    } catch (error) {
+      console.error('Error fetching NanoBanana API key:', error);
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, options);
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || data.message || `NanoBanana API error: ${response.status}`);
-    }
-
-    return data;
+    return this.defaultApiKey;
   }
 
   /**
-   * Generate image from text prompt
+   * Generate image from text prompt using Google Gemini
    * @param {string} prompt - Text description of the image
    * @param {object} options - Generation options
    */
@@ -50,54 +63,97 @@ class NanoBananaService {
     const {
       aspectRatio = '16:9',
       style = 'cinematic',
-      negativePrompt = '',
-      referenceImages = [],
-      width = 1024,
-      height = 576
+      apiKey = null
     } = options;
 
-    const body = {
-      prompt,
-      negative_prompt: negativePrompt,
-      aspect_ratio: aspectRatio,
-      style,
-      width,
-      height
-    };
-
-    // Add reference images for character consistency if provided
-    if (referenceImages.length > 0) {
-      body.reference_images = referenceImages;
-      body.reference_strength = 0.5;
+    const key = apiKey || this.defaultApiKey;
+    if (!key) {
+      throw new Error('Google API key not configured. Please add your API key in Settings.');
     }
 
-    const result = await this.request('/v1/images/generate', 'POST', body);
+    // Enhance prompt with style
+    const enhancedPrompt = `${style} style image: ${prompt}. High quality, detailed, professional.`;
 
-    // Return in standardized format
-    return {
-      success: true,
-      data: {
-        task_id: result.task_id || result.id,
-        status: result.status || 'pending'
+    const url = `${this.baseUrl}/${this.model}:generateContent?key=${key}`;
+
+    const body = {
+      contents: [{
+        parts: [{
+          text: `Generate an image: ${enhancedPrompt}`
+        }]
+      }],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"]
       }
     };
+
+    console.log('[Gemini Image] Calling API:', { model: this.model, promptLength: enhancedPrompt.length });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('[Gemini Image] API Error:', data);
+      throw new Error(data.error?.message || `Gemini API error: ${response.status}`);
+    }
+
+    console.log('[Gemini Image] Response received:', {
+      hasCandidates: !!data.candidates,
+      candidatesCount: data.candidates?.length
+    });
+
+    // Extract image from response
+    const candidates = data.candidates || [];
+    if (candidates.length === 0) {
+      throw new Error('No image generated by Gemini');
+    }
+
+    const parts = candidates[0]?.content?.parts || [];
+    const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+
+    if (imagePart) {
+      // Return base64 image data directly
+      const base64Data = imagePart.inlineData.data;
+      const mimeType = imagePart.inlineData.mimeType;
+      const ext = mimeType.split('/')[1] || 'png';
+
+      return {
+        success: true,
+        data: {
+          image_url: `data:${mimeType};base64,${base64Data}`,
+          image_base64: base64Data,
+          format: ext,
+          status: 'completed'
+        }
+      };
+    }
+
+    // Check if there's text explaining why no image
+    const textPart = parts.find(p => p.text);
+    if (textPart) {
+      throw new Error(`Gemini response: ${textPart.text}`);
+    }
+
+    throw new Error('No image in Gemini response');
   }
 
   /**
-   * Check image generation task status
-   * @param {string} taskId - The task ID returned from generation request
+   * Check image generation task status (not needed for Gemini - synchronous)
    */
-  async getTaskStatus(taskId) {
-    const result = await this.request(`/v1/tasks/${taskId}`, 'GET');
-
-    // Return in standardized format
+  async getTaskStatus(taskId, apiKey = null) {
+    // Gemini generates images synchronously, no task polling needed
     return {
       success: true,
       data: {
         task_id: taskId,
-        status: result.status,
-        images: result.images || result.output || [],
-        error: result.error
+        status: 'completed'
       }
     };
   }

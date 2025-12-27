@@ -100,6 +100,49 @@ class PiAPIService {
   }
 
   /**
+   * Generate video from start and end frames (first/last frame mode)
+   * @param {string} startImageUrl - URL of the first frame image
+   * @param {string} endImageUrl - URL of the last frame image
+   * @param {string} prompt - Motion/action description
+   * @param {object} options - Generation options
+   */
+  async generateVideoFromFrames(startImageUrl, endImageUrl, prompt = '', options = {}) {
+    const {
+      duration = 5,
+      aspectRatio = '16:9',
+      mode = 'std',
+      version = '2.5',
+      negativePrompt = ''
+    } = options;
+
+    const body = {
+      model: 'kling',
+      task_type: 'video_generation',
+      input: {
+        prompt,
+        negative_prompt: negativePrompt,
+        image_url: startImageUrl,        // First frame
+        image_tail_url: endImageUrl,     // Last frame (end frame)
+        duration,
+        aspect_ratio: aspectRatio,
+        mode,
+        version
+      }
+    };
+
+    console.log('[PiAPI] Generating video from frames:', {
+      startImage: startImageUrl?.substring(0, 50) + '...',
+      endImage: endImageUrl?.substring(0, 50) + '...',
+      prompt: prompt?.substring(0, 100),
+      duration,
+      mode
+    });
+
+    const result = await this.request('/api/v1/task', 'POST', body);
+    return result;
+  }
+
+  /**
    * Note: PiAPI Kling API does NOT support image generation.
    * It only supports video generation tasks.
    * For image generation, use the official Kling API or another service.

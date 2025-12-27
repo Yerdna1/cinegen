@@ -10,7 +10,8 @@ import {
   XMarkIcon,
   SpeakerWaveIcon,
   PlayIcon,
-  StopIcon
+  StopIcon,
+  FilmIcon
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -25,7 +26,7 @@ const PROVIDER_NAMES = {
   // Image Providers
   'kling': 'Kling',
   'piapi': 'PiAPI',
-  'nanobanana': 'NanoBanana',
+  'nanobanana': 'Google Gemini',
   'modal-image': 'Modal Flux',
   // Voice Providers
   'elevenlabs': 'ElevenLabs',
@@ -57,9 +58,11 @@ export default function SceneCard({
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioElement, setAudioElement] = useState(null);
   const [imageTasks, setImageTasks] = useState({ startTaskId: null, endTaskId: null });
+  const [videoTaskId, setVideoTaskId] = useState(null);
   const [editData, setEditData] = useState({
     dialogue: scene.dialogue || '',
     startImagePrompt: scene.startImagePrompt || '',
@@ -112,7 +115,8 @@ export default function SceneCard({
     setIsGeneratingImages(true);
     try {
       const response = await api.post(
-        `/generation/projects/${projectId}/scenes/${scene.id}/generate-images`
+        `/generation/projects/${projectId}/scenes/${scene.id}/generate-images`,
+        { imageProvider } // Pass user's selected image provider
       );
 
       const tasks = response.data.tasks;
@@ -260,15 +264,115 @@ export default function SceneCard({
       return;
     }
 
-    const audio = new Audio(scene.audioUrl);
+    // Construct full URL - audio files are served from backend
+    const backendUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:3001';
+    const fullAudioUrl = scene.audioUrl.startsWith('http') ? scene.audioUrl : `${backendUrl}${scene.audioUrl}`;
+
+    const audio = new Audio(fullAudioUrl);
     audio.onended = () => setIsPlayingAudio(false);
-    audio.onerror = () => {
+    audio.onerror = (e) => {
+      console.error('Audio playback error:', e);
       toast.error('Failed to play audio');
       setIsPlayingAudio(false);
     };
     audio.play();
     setAudioElement(audio);
     setIsPlayingAudio(true);
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!scene.startImageUrl || !scene.endImageUrl) {
+      toast.error('Generate both start and end images first');
+      return;
+    }
+
+    setIsGeneratingVideo(true);
+    try {
+      const response = await api.post(
+        `/generation/projects/${projectId}/scenes/${scene.id}/generate-video`,
+        { duration: 5, mode: 'pro' }  // 'pro' mode required for first/last frame feature
+      );
+
+      if (response.data.taskId) {
+        setVideoTaskId(response.data.taskId);
+        toast.success('Video generation started');
+        pollVideoStatus(response.data.taskId);
+      } else if (response.data.videoUrl) {
+        // Immediate result (unlikely for video)
+        onUpdate({ ...scene, videoUrl: response.data.videoUrl });
+        toast.success('Video generated!');
+        setIsGeneratingVideo(false);
+      }
+    } catch (error) {
+      console.error('Generate video error:', error);
+      toast.error(error.response?.data?.error || 'Failed to generate video');
+      setIsGeneratingVideo(false);
+    }
+  };
+
+  const pollVideoStatus = async (taskId) => {
+    let attempts = 0;
+    const maxAttempts = 120; // 10 minutes with 5-second intervals
+
+    const checkStatus = async () => {
+      try {
+        const response = await api.get(
+          `/generation/projects/${projectId}/scenes/${scene.id}/video-status?taskId=${taskId}`
+        );
+
+        const status = response.data;
+
+        // Update scene if we got video URL
+        if (status.videoUrl) {
+          onUpdate({
+            ...scene,
+            videoUrl: status.videoUrl,
+            status: 'COMPLETE'
+          });
+          setIsGeneratingVideo(false);
+          setVideoTaskId(null);
+          toast.success('Video generated!');
+          return;
+        }
+
+        // Check for completion without URL (error case)
+        if (status.status === 'completed' || status.status === 'success') {
+          setIsGeneratingVideo(false);
+          setVideoTaskId(null);
+          toast.success('Video generation completed');
+          return;
+        }
+
+        // Check for errors
+        if (status.status === 'failed' || status.status === 'error') {
+          setIsGeneratingVideo(false);
+          setVideoTaskId(null);
+          toast.error('Video generation failed');
+          return;
+        }
+
+        // Continue polling
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000);
+        } else {
+          setIsGeneratingVideo(false);
+          setVideoTaskId(null);
+          toast.error('Video generation timed out');
+        }
+      } catch (error) {
+        console.error('Poll video status error:', error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000);
+        } else {
+          setIsGeneratingVideo(false);
+          setVideoTaskId(null);
+        }
+      }
+    };
+
+    setTimeout(checkStatus, 5000); // First check after 5 seconds
   };
 
   const handleSaveEdit = async () => {
@@ -322,6 +426,13 @@ export default function SceneCard({
         isOpen={isGeneratingAudio}
         title="Generating Audio"
         message={`Creating audio for Scene ${index + 1}. This may take a moment...`}
+      />
+
+      {/* Loading Modal for Video Generation */}
+      <LoadingModal
+        isOpen={isGeneratingVideo}
+        title="Generating Video"
+        message={`Creating video for Scene ${index + 1} using PiAPI. This may take several minutes...`}
       />
 
       <div className="border rounded-lg p-4 bg-white shadow-sm">
@@ -494,6 +605,45 @@ export default function SceneCard({
               <p className="text-xs text-green-600 mt-1">Audio ready</p>
             ) : (
               <p className="text-xs text-gray-400 mt-1">No audio generated</p>
+            )}
+          </div>
+
+          {/* Video Section */}
+          <div className="pt-2 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-500 uppercase">Video</label>
+              {scene.startImageUrl && scene.endImageUrl && (
+                <button
+                  onClick={handleGenerateVideo}
+                  disabled={isGeneratingVideo}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                  title="Generate video from start and end frames using PiAPI"
+                >
+                  <FilmIcon className="h-3.5 w-3.5" />
+                  {isGeneratingVideo ? 'Generating...' : 'Generate Video (PiAPI)'}
+                </button>
+              )}
+            </div>
+            {scene.videoUrl ? (
+              <div className="mt-1">
+                <video
+                  src={scene.videoUrl}
+                  controls
+                  className="w-full rounded border"
+                  style={{ maxHeight: '200px' }}
+                >
+                  Your browser does not support video playback.
+                </video>
+                <p className="text-xs text-green-600 mt-1">Video ready</p>
+              </div>
+            ) : (
+              <div className="text-xs text-gray-400">
+                {scene.startImageUrl && scene.endImageUrl ? (
+                  'Click "Generate Video" to create video from frames'
+                ) : (
+                  'Generate both start and end images first'
+                )}
+              </div>
             )}
           </div>
         </div>

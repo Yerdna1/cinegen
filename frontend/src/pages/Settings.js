@@ -29,7 +29,7 @@ export default function Settings() {
   const providers = [
     { id: 'claude-oauth', name: 'Claude Code OAuth', description: 'Uses your Claude subscription (run: claude setup-token)', isOAuth: true },
     { id: 'hailuo', name: 'Hailuo/Kling', description: 'For video generation' },
-    { id: 'nanobanana', name: 'NanoBanana', description: 'For image generation' },
+    { id: 'nanobanana', name: 'Google Gemini', description: 'For AI image generation (Gemini API)' },
     { id: '11labs', name: '11Labs', description: 'For voice/audio generation' },
     { id: 'anthropic', name: 'Anthropic API', description: 'Direct API access (separate credits)' },
     { id: 'modal', name: 'Modal.com API Key', description: 'For self-hosted AI models' },
@@ -45,7 +45,7 @@ export default function Settings() {
 
   const imageProviderOptions = [
     { id: 'kling', name: 'Kling AI', description: 'Via official API' },
-    { id: 'nanobanana', name: 'NanoBanana', description: 'Image generation API' },
+    { id: 'nanobanana', name: 'Google Gemini', description: 'Gemini 3 Pro Image Generation' },
     { id: 'modal', name: 'Modal.com (Flux)', description: 'Self-hosted on Modal.com' }
     // Note: PiAPI only supports VIDEO generation, not images
   ];

@@ -208,10 +208,12 @@ export default function ProjectWizard() {
       // Merge saved state with project data - localStorage takes priority for step
       if (savedState && savedState.projectId === id) {
         setCurrentStep(savedState.currentStep || 1);
-        // Use saved formData for unsaved changes, but prefer project data for critical fields
+        // Use saved formData for unsaved changes, but EXCLUDE provider fields
+        // Provider fields should come from user preferences, not saved state
+        const { llmProvider, imageProvider, voiceProvider, ...savedFormDataWithoutProviders } = savedState.formData || {};
         setFormData({
           ...projectFormData,
-          ...(savedState.formData || {})
+          ...savedFormDataWithoutProviders
         });
         setScenes(savedState.scenes || project.scenes || []);
       } else {
