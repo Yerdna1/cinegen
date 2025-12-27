@@ -1,14 +1,29 @@
 /**
  * Database Seed Script
  *
- * Sets up default preferences for specific users.
+ * Sets up default preferences and API keys for specific users.
  * Run with: npx prisma db seed
  * Or directly: node prisma/seed.js
  */
 
 const { PrismaClient } = require('@prisma/client');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
+
+// Encryption for API keys (must match users.js)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const ALGORITHM = 'aes-256-gcm';
+
+function encrypt(text) {
+  const iv = crypto.randomBytes(16);
+  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag();
+  return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+}
 
 // Modal.com endpoints configuration
 // Based on actual deployed apps from: modal app list
@@ -21,12 +36,16 @@ const MODAL_ENDPOINTS = {
   fileS3: 'https://andrejgalad--file-to-s3-upload.modal.run'
 };
 
+// Claude Code OAuth Token (from claude setup-token)
+// This uses your Claude subscription instead of separate API credits
+const CLAUDE_OAUTH_TOKEN = process.env.CLAUDE_CODE_OAUTH_TOKEN || '';
+
 // Users to pre-configure with Modal.com defaults
 const PRECONFIGURED_USERS = [
   {
     email: 'andrejgalad@gmail.com',
     preferences: {
-      defaultLlmProvider: 'anthropic',
+      defaultLlmProvider: 'claude-sdk', // Use Claude SDK with OAuth
       defaultImageProvider: 'kling',
       defaultVoiceProvider: 'modal-chatterbox',
       modalChatterboxEndpoint: MODAL_ENDPOINTS.chatterbox,
@@ -34,7 +53,10 @@ const PRECONFIGURED_USERS = [
       modalHallo3Endpoint: MODAL_ENDPOINTS.hallo3,
       modalMusicEndpoint: MODAL_ENDPOINTS.music,
       modalFileS3Endpoint: MODAL_ENDPOINTS.fileS3
-    }
+    },
+    apiKeys: [
+      { provider: 'claude-oauth', key: CLAUDE_OAUTH_TOKEN }
+    ]
   }
 ];
 
@@ -82,6 +104,34 @@ async function main() {
     console.log(`    - Modal Hallo3: ${userConfig.preferences.modalHallo3Endpoint}`);
     console.log(`    - Modal Music: ${userConfig.preferences.modalMusicEndpoint}`);
     console.log(`    - Modal File S3: ${userConfig.preferences.modalFileS3Endpoint}`);
+
+    // Set up API keys
+    if (userConfig.apiKeys) {
+      console.log(`  Setting up API keys...`);
+      for (const apiKeyConfig of userConfig.apiKeys) {
+        if (!apiKeyConfig.key) {
+          console.log(`    - ${apiKeyConfig.provider}: Skipped (no key provided)`);
+          continue;
+        }
+
+        const encryptedKey = encrypt(apiKeyConfig.key);
+        await prisma.apiKey.upsert({
+          where: {
+            userId_provider: {
+              userId: user.id,
+              provider: apiKeyConfig.provider
+            }
+          },
+          update: { encryptedKey },
+          create: {
+            userId: user.id,
+            provider: apiKeyConfig.provider,
+            encryptedKey
+          }
+        });
+        console.log(`    - ${apiKeyConfig.provider}: ✓ Saved (****${apiKeyConfig.key.slice(-4)})`);
+      }
+    }
   }
 
   console.log('\nSeed completed!');

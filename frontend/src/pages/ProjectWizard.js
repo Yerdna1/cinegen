@@ -823,6 +823,8 @@ export default function ProjectWizard() {
                       isLast={index === scenes.length - 1}
                       voiceId={firstVoice}
                       voiceProvider={formData.voiceProvider}
+                      llmProvider={formData.llmProvider}
+                      imageProvider={formData.imageProvider}
                     />
                   );
                 })}

@@ -49,6 +49,9 @@ model UserPreferences {
   // Music generation
   modalMusicEndpoint         String?  @map("modal_music_endpoint")
 
+  // Image generation (Flux or other models)
+  modalImageEndpoint         String?  @map("modal_image_endpoint")
+
   // File storage utility
   modalFileS3Endpoint        String?  @map("modal_file_s3_endpoint")
 

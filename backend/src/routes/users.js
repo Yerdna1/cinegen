@@ -118,7 +118,7 @@ router.put('/api-keys', async (req, res, next) => {
     const prisma = req.app.get('prisma');
     const { provider, apiKey } = req.body;
 
-    const validProviders = ['hailuo', 'kling', 'nanobanana', '11labs', 'anthropic', 'modal'];
+    const validProviders = ['hailuo', 'kling', 'nanobanana', '11labs', 'anthropic', 'modal', 'claude-oauth'];
     if (!validProviders.includes(provider)) {
       return res.status(400).json({ error: 'Invalid provider' });
     }
@@ -177,6 +177,7 @@ router.get('/preferences', async (req, res, next) => {
         modalCoquiTtsEndpoint: preferences.modalCoquiTtsEndpoint,
         modalHallo3Endpoint: preferences.modalHallo3Endpoint,
         modalMusicEndpoint: preferences.modalMusicEndpoint,
+        modalImageEndpoint: preferences.modalImageEndpoint,
         modalFileS3Endpoint: preferences.modalFileS3Endpoint
       }
     });
@@ -197,12 +198,14 @@ router.put('/preferences', async (req, res, next) => {
       modalCoquiTtsEndpoint,
       modalHallo3Endpoint,
       modalMusicEndpoint,
+      modalImageEndpoint,
       modalFileS3Endpoint
     } = req.body;
 
     // Validate providers
-    const validLlmProviders = ['anthropic', 'modal'];
-    const validImageProviders = ['kling', 'piapi', 'nanobanana', 'modal'];
+    // Note: PiAPI only supports video generation, not images
+    const validLlmProviders = ['anthropic', 'modal', 'claude-sdk'];
+    const validImageProviders = ['kling', 'nanobanana', 'modal'];
     const validVoiceProviders = ['elevenlabs', 'modal-chatterbox', 'modal-coqui'];
 
     if (defaultLlmProvider && !validLlmProviders.includes(defaultLlmProvider)) {
@@ -224,6 +227,7 @@ router.put('/preferences', async (req, res, next) => {
     if (modalCoquiTtsEndpoint !== undefined) updateData.modalCoquiTtsEndpoint = modalCoquiTtsEndpoint;
     if (modalHallo3Endpoint !== undefined) updateData.modalHallo3Endpoint = modalHallo3Endpoint;
     if (modalMusicEndpoint !== undefined) updateData.modalMusicEndpoint = modalMusicEndpoint;
+    if (modalImageEndpoint !== undefined) updateData.modalImageEndpoint = modalImageEndpoint;
     if (modalFileS3Endpoint !== undefined) updateData.modalFileS3Endpoint = modalFileS3Endpoint;
 
     const preferences = await prisma.userPreferences.upsert({
@@ -245,6 +249,7 @@ router.put('/preferences', async (req, res, next) => {
         modalCoquiTtsEndpoint: preferences.modalCoquiTtsEndpoint,
         modalHallo3Endpoint: preferences.modalHallo3Endpoint,
         modalMusicEndpoint: preferences.modalMusicEndpoint,
+        modalImageEndpoint: preferences.modalImageEndpoint,
         modalFileS3Endpoint: preferences.modalFileS3Endpoint
       }
     });

@@ -2,11 +2,13 @@
  * Image Provider Factory
  *
  * Factory pattern for selecting image generation providers.
- * Supports: Kling, PiAPI (Kling wrapper), NanoBanana, Modal.com hosted models
+ * Supports: Kling, NanoBanana, Modal.com hosted models
+ *
+ * Note: PiAPI only supports VIDEO generation, not images.
+ * Use PiAPI for video generation via the video-factory instead.
  */
 
 const klingService = require('./kling');
-const piapiService = require('./piapi');
 const nanobananaService = require('./nanobanana');
 const modalImageService = require('./modal-image');
 
@@ -19,9 +21,6 @@ function getImageProvider(providerName) {
   switch (providerName?.toLowerCase()) {
     case 'kling':
       return klingService;
-
-    case 'piapi':
-      return piapiService;
 
     case 'nanobanana':
       return nanobananaService;
@@ -48,12 +47,6 @@ async function getAvailableImageProviders() {
       service: klingService
     },
     {
-      id: 'piapi',
-      name: 'PiAPI (Kling)',
-      description: 'Kling via PiAPI membership credits',
-      service: piapiService
-    },
-    {
       id: 'nanobanana',
       name: 'NanoBanana Pro',
       description: 'NanoBanana image generation API',
@@ -65,6 +58,7 @@ async function getAvailableImageProviders() {
       description: 'Self-hosted image models on Modal.com',
       service: modalImageService
     }
+    // Note: PiAPI removed - it only supports VIDEO generation, not images
   ];
 
   // Check availability of each provider

@@ -15,6 +15,27 @@ import {
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
+// Provider display names for buttons
+const PROVIDER_NAMES = {
+  // LLM Providers
+  'claude-sdk': 'Claude SDK',
+  'anthropic': 'Anthropic API',
+  'modal': 'Modal LLM',
+  // Image Providers
+  'kling': 'Kling',
+  'piapi': 'PiAPI',
+  'nanobanana': 'NanoBanana',
+  'modal-image': 'Modal Flux',
+  // Voice Providers
+  'elevenlabs': 'ElevenLabs',
+  'modal-chatterbox': 'Chatterbox',
+  'modal-coqui': 'Coqui TTS',
+};
+
+const getProviderName = (providerId) => {
+  return PROVIDER_NAMES[providerId] || providerId || 'Unknown';
+};
+
 export default function SceneCard({
   scene,
   index,
@@ -26,7 +47,9 @@ export default function SceneCard({
   isFirst,
   isLast,
   voiceId,
-  voiceProvider
+  voiceProvider,
+  llmProvider,
+  imageProvider
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -334,10 +357,10 @@ export default function SceneCard({
             onClick={handleGenerateContent}
             disabled={isGeneratingContent}
             className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
-            title="Generate dialogue and image prompts using AI"
+            title={`Generate dialogue and image prompts using ${getProviderName(llmProvider)}`}
           >
             <SparklesIcon className="h-3.5 w-3.5" />
-            {isGeneratingContent ? 'Generating...' : 'Generate'}
+            {isGeneratingContent ? 'Generating...' : `Generate (${getProviderName(llmProvider)})`}
           </button>
           <button
             onClick={() => setIsEditing(!isEditing)}
@@ -421,9 +444,10 @@ export default function SceneCard({
               onClick={handleGenerateImages}
               disabled={isGeneratingImages}
               className="w-full py-2 flex items-center justify-center gap-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
+              title={`Generate images using ${getProviderName(imageProvider)}`}
             >
               <PhotoIcon className="h-4 w-4" />
-              {isGeneratingImages ? 'Generating Images...' : 'Generate Images'}
+              {isGeneratingImages ? 'Generating Images...' : `Generate Images (${getProviderName(imageProvider)})`}
             </button>
           )}
 
@@ -450,10 +474,10 @@ export default function SceneCard({
                 onClick={handleGenerateAudio}
                 disabled={isGeneratingAudio || !scene.dialogue}
                 className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                title={!scene.dialogue ? 'Generate dialogue first' : 'Generate audio from dialogue'}
+                title={!scene.dialogue ? 'Generate dialogue first' : `Generate audio using ${getProviderName(voiceProvider)}`}
               >
                 <SpeakerWaveIcon className="h-3.5 w-3.5" />
-                {isGeneratingAudio ? 'Generating...' : 'Generate Audio'}
+                {isGeneratingAudio ? 'Generating...' : `Generate Audio (${getProviderName(voiceProvider)})`}
               </button>
             </div>
             {scene.audioUrl ? (

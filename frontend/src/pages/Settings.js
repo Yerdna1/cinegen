@@ -16,6 +16,7 @@ export default function Settings() {
     modalCoquiTtsEndpoint: '',
     modalHallo3Endpoint: '',
     modalMusicEndpoint: '',
+    modalImageEndpoint: '',
     modalFileS3Endpoint: ''
   });
   const [loading, setLoading] = useState(true);
@@ -26,23 +27,25 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
 
   const providers = [
+    { id: 'claude-oauth', name: 'Claude Code OAuth', description: 'Uses your Claude subscription (run: claude setup-token)', isOAuth: true },
     { id: 'hailuo', name: 'Hailuo/Kling', description: 'For video generation' },
     { id: 'nanobanana', name: 'NanoBanana', description: 'For image generation' },
     { id: '11labs', name: '11Labs', description: 'For voice/audio generation' },
-    { id: 'anthropic', name: 'Anthropic Claude', description: 'For AI scene content generation' },
+    { id: 'anthropic', name: 'Anthropic API', description: 'Direct API access (separate credits)' },
     { id: 'modal', name: 'Modal.com', description: 'For self-hosted AI models' }
   ];
 
   const llmProviderOptions = [
-    { id: 'anthropic', name: 'Anthropic Claude', description: 'Cloud-based LLM' },
+    { id: 'claude-sdk', name: 'Claude SDK (OAuth)', description: 'Uses your Claude subscription' },
+    { id: 'anthropic', name: 'Anthropic API', description: 'Direct API (separate credits)' },
     { id: 'modal', name: 'Modal.com (Qwen)', description: 'Self-hosted on Modal.com' }
   ];
 
   const imageProviderOptions = [
     { id: 'kling', name: 'Kling AI', description: 'Via official API' },
-    { id: 'piapi', name: 'PiAPI (Kling)', description: 'Via membership credits' },
     { id: 'nanobanana', name: 'NanoBanana', description: 'Image generation API' },
     { id: 'modal', name: 'Modal.com (Flux)', description: 'Self-hosted on Modal.com' }
+    // Note: PiAPI only supports VIDEO generation, not images
   ];
 
   const voiceProviderOptions = [
@@ -302,6 +305,18 @@ export default function Settings() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
             <p className="text-xs text-gray-400 mt-1">AI music generation</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Image Generation (Flux)</label>
+            <input
+              type="text"
+              value={preferences.modalImageEndpoint || ''}
+              onChange={(e) => updatePreference('modalImageEndpoint', e.target.value)}
+              placeholder="https://username--flux-image-generator.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">AI image generation (Flux or similar)</p>
           </div>
 
           <div>

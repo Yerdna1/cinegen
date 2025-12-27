@@ -9,28 +9,66 @@
  */
 
 const { query } = require('@anthropic-ai/claude-agent-sdk');
+const crypto = require('crypto');
+
+// Decryption helper for user API keys stored in database
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const ALGORITHM = 'aes-256-gcm';
+
+function decrypt(encryptedData) {
+  const parts = encryptedData.split(':');
+  const iv = Buffer.from(parts[0], 'hex');
+  const authTag = Buffer.from(parts[1], 'hex');
+  const encrypted = parts[2];
+  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
 
 class ClaudeSDKService {
   constructor() {
-    // Check for OAuth token or API key
-    this.oauthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN;
-    this.apiKey = process.env.ANTHROPIC_API_KEY;
+    // Check for OAuth token or API key from environment (fallback)
+    this.envOauthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN;
+    this.envApiKey = process.env.ANTHROPIC_API_KEY;
     this.model = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929';
   }
 
   /**
-   * Get user's API key - for Claude SDK, we use the OAuth token from environment
-   * This maintains compatibility with the LLM factory interface
-   * @param {object} prisma - Prisma client (not used for SDK auth)
-   * @param {string} userId - User ID (not used for SDK auth)
-   * @returns {string|null} The OAuth token or API key
+   * Get user's OAuth token from database or environment
+   * @param {object} prisma - Prisma client
+   * @param {string} userId - User ID
+   * @returns {string|null} The OAuth token
    */
   async getUserApiKey(prisma, userId) {
-    // Claude SDK uses environment-based auth (OAuth token or API key)
-    // Return a marker that auth is available
-    if (this.oauthToken || this.apiKey) {
-      return 'sdk-auth-available';
+    // First, try to get OAuth token from database
+    if (prisma && userId) {
+      const oauthKey = await prisma.apiKey.findFirst({
+        where: {
+          userId,
+          provider: 'claude-oauth'
+        }
+      });
+
+      if (oauthKey) {
+        const token = decrypt(oauthKey.encryptedKey);
+        // Set it for this request
+        process.env.CLAUDE_CODE_OAUTH_TOKEN = token;
+        return token;
+      }
     }
+
+    // Fall back to environment variables
+    if (this.envOauthToken) {
+      return this.envOauthToken;
+    }
+
+    if (this.envApiKey) {
+      return this.envApiKey;
+    }
+
     return null;
   }
 
