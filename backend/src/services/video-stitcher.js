@@ -145,26 +145,29 @@ class VideoStitcher {
    */
   async createTitleCard(text, duration = 3) {
     const outputPath = path.join(this.tempDir, `title_${Date.now()}.mp4`);
+    const fontPath = '/System/Library/Fonts/Supplemental/Arial.ttf'; // More universal font
 
     return new Promise((resolve, reject) => {
       ffmpeg()
         .input(`color=c=black:s=1920x1080:d=${duration}`)
         .inputOptions(['-f lavfi'])
-        .input(`anullsrc=channel_layout=stereo:sample_rate=44100`)
-        .inputOptions(['-f lavfi', `-t ${duration}`])
-        .complexFilter([
-          `[0:v]drawtext=text='${text.replace(/'/g, "\\'")}':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`
-        ])
+        .input(`anullsrc=channel_layout=stereo:sample_rate=44100:duration=${duration}`)
+        .inputOptions(['-f lavfi'])
         .outputOptions([
-          '-map [v]',
-          '-map 1:a',
+          `-vf drawtext=text='${text.replace(/'/g, "\\'")}':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=${fontPath}`,
           '-c:v libx264',
           '-c:a aac',
           '-shortest',
           '-pix_fmt yuv420p'
         ])
         .output(outputPath)
-        .on('end', () => resolve(outputPath))
+        .on('start', (cmd) => {
+          console.log('[TitleCard] ffmpeg command:', cmd);
+        })
+        .on('end', () => {
+          console.log('[TitleCard] Created successfully');
+          resolve(outputPath);
+        })
         .on('error', (error) => {
           console.error('[TitleCard] Error:', error);
           reject(error);
@@ -178,6 +181,7 @@ class VideoStitcher {
    */
   async createCredits(text, duration = 5) {
     const outputPath = path.join(this.tempDir, `credits_${Date.now()}.mp4`);
+    const fontPath = '/System/Library/Fonts/Supplemental/Arial.ttf';
 
     // Split credits text into lines and escape quotes
     const creditsText = text.split('\n').join('\\n').replace(/'/g, "\\'");
@@ -186,21 +190,23 @@ class VideoStitcher {
       ffmpeg()
         .input(`color=c=black:s=1920x1080:d=${duration}`)
         .inputOptions(['-f lavfi'])
-        .input(`anullsrc=channel_layout=stereo:sample_rate=44100`)
-        .inputOptions(['-f lavfi', `-t ${duration}`])
-        .complexFilter([
-          `[0:v]drawtext=text='${creditsText}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`
-        ])
+        .input(`anullsrc=channel_layout=stereo:sample_rate=44100:duration=${duration}`)
+        .inputOptions(['-f lavfi'])
         .outputOptions([
-          '-map [v]',
-          '-map 1:a',
+          `-vf drawtext=text='${creditsText}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=${fontPath}`,
           '-c:v libx264',
           '-c:a aac',
           '-shortest',
           '-pix_fmt yuv420p'
         ])
         .output(outputPath)
-        .on('end', () => resolve(outputPath))
+        .on('start', (cmd) => {
+          console.log('[Credits] ffmpeg command:', cmd);
+        })
+        .on('end', () => {
+          console.log('[Credits] Created successfully');
+          resolve(outputPath);
+        })
         .on('error', (error) => {
           console.error('[Credits] Error:', error);
           reject(error);
@@ -210,99 +216,86 @@ class VideoStitcher {
   }
 
   /**
-   * Render video using ffmpeg with transitions support
+   * Render video using concat demuxer (simple, reliable method)
    */
   async renderVideo(videoPaths, outputPath, settings = {}) {
-    const transition = settings.transition || 'none';
-    const transitionDuration = 0.5; // 0.5 seconds
+    const concatFilePath = path.join(this.tempDir, `concat_${Date.now()}.txt`);
 
-    return new Promise((resolve, reject) => {
-      let command = ffmpeg();
+    try {
+      // Create concat file
+      await this.createConcatFile(videoPaths, concatFilePath);
+      console.log('[ffmpeg] Created concat file:', concatFilePath);
 
-      // Add all video inputs
-      videoPaths.forEach(videoPath => {
-        command.input(videoPath);
-      });
+      return new Promise((resolve, reject) => {
+        let command = ffmpeg()
+          .input(concatFilePath)
+          .inputOptions(['-f concat', '-safe 0']);
 
-      // Build filter complex for transitions
-      let filterComplex = [];
+        // Add background music if provided
+        if (settings.backgroundMusicUrl) {
+          command.input(settings.backgroundMusicUrl);
 
-      if (transition !== 'none' && videoPaths.length > 1) {
-        // Build xfade filter chain for transitions
-        let lastOutput = '[0:v]';
-        for (let i = 0; i < videoPaths.length - 1; i++) {
-          const nextInput = `[${i + 1}:v]`;
-          const outputLabel = i === videoPaths.length - 2 ? '[outv]' : `[v${i}]`;
+          const dialogueVolume = (settings.dialogueVolume || 100) / 100;
+          const musicVolume = (settings.musicVolume || 30) / 100;
 
-          // Calculate offset (each video is ~6 seconds, subtract transition duration)
-          const offset = (i + 1) * 6 - transitionDuration;
-
-          const transitionType = transition === 'fade' ? 'fade' : 'dissolve';
-          filterComplex.push(
-            `${lastOutput}${nextInput}xfade=transition=${transitionType}:duration=${transitionDuration}:offset=${offset}${outputLabel}`
-          );
-
-          lastOutput = outputLabel;
+          command
+            .complexFilter([
+              `[0:a]volume=${dialogueVolume}[dialogue]`,
+              `[1:a]volume=${musicVolume}[music]`,
+              '[dialogue][music]amix=inputs=2:duration=first:dropout_transition=2[aout]'
+            ])
+            .outputOptions([
+              '-map 0:v',
+              '-map [aout]'
+            ]);
+        } else {
+          command.outputOptions([
+            '-c copy'
+          ]);
         }
 
-        // Audio handling - concat all audio streams
-        const audioInputs = videoPaths.map((_, i) => `[${i}:a]`).join('');
-        filterComplex.push(`${audioInputs}concat=n=${videoPaths.length}:v=0:a=1[outa]`);
-      } else {
-        // No transitions - just concatenate video and audio
-        const videoInputs = videoPaths.map((_, i) => `[${i}:v]`).join('');
-        const audioInputs = videoPaths.map((_, i) => `[${i}:a]`).join('');
-        filterComplex.push(`${videoInputs}concat=n=${videoPaths.length}:v=1:a=0[outv]`);
-        filterComplex.push(`${audioInputs}concat=n=${videoPaths.length}:v=0:a=1[outa]`);
-      }
-
-      // Add background music if provided
-      if (settings.backgroundMusicUrl) {
-        command.input(settings.backgroundMusicUrl);
-        const musicIndex = videoPaths.length;
-
-        filterComplex.push(
-          `[outa]volume=${(settings.dialogueVolume || 100) / 100}[dialogue]`,
-          `[${musicIndex}:a]volume=${(settings.musicVolume || 30) / 100}[music]`,
-          '[dialogue][music]amix=inputs=2:duration=first[aout]'
-        );
-      } else {
-        filterComplex.push('[outa]volume=1[aout]');
-      }
-
-      console.log('[ffmpeg] Filter complex:', JSON.stringify(filterComplex, null, 2));
-
-      command
-        .complexFilter(filterComplex)
-        .outputOptions([
-          '-map [outv]',
-          '-map [aout]',
-          '-c:v libx264',
-          '-preset medium',
-          '-crf 23',
-          '-c:a aac',
-          '-b:a 128k',
-          '-movflags +faststart',
-          '-pix_fmt yuv420p'
-        ])
-        .output(outputPath)
-        .on('start', (commandLine) => {
-          console.log('[ffmpeg] Command:', commandLine);
-        })
-        .on('progress', (progress) => {
-          console.log(`[ffmpeg] Progress: ${progress.percent?.toFixed(1)}%`);
-        })
-        .on('end', () => {
-          console.log('[ffmpeg] Rendering complete');
-          resolve(outputPath);
-        })
-        .on('error', (error) => {
-          console.error('[ffmpeg] Error:', error);
-          console.error('[ffmpeg] Filter complex was:', JSON.stringify(filterComplex, null, 2));
-          reject(error);
-        })
-        .run();
-    });
+        command
+          .outputOptions([
+            '-c:v libx264',
+            '-preset medium',
+            '-crf 23',
+            '-c:a aac',
+            '-b:a 128k',
+            '-movflags +faststart'
+          ])
+          .output(outputPath)
+          .on('start', (commandLine) => {
+            console.log('[ffmpeg] Command:', commandLine);
+          })
+          .on('progress', (progress) => {
+            console.log(`[ffmpeg] Progress: ${progress.percent?.toFixed(1)}%`);
+          })
+          .on('end', async () => {
+            console.log('[ffmpeg] Rendering complete');
+            // Cleanup concat file
+            try {
+              await unlink(concatFilePath);
+            } catch (err) {
+              console.error('[ffmpeg] Failed to cleanup concat file:', err);
+            }
+            resolve(outputPath);
+          })
+          .on('error', async (error) => {
+            console.error('[ffmpeg] Error:', error);
+            // Cleanup concat file
+            try {
+              await unlink(concatFilePath);
+            } catch (err) {
+              console.error('[ffmpeg] Failed to cleanup concat file:', err);
+            }
+            reject(error);
+          })
+          .run();
+      });
+    } catch (error) {
+      console.error('[renderVideo] Error:', error);
+      throw error;
+    }
   }
 
   /**
