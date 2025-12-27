@@ -2,19 +2,25 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { put } = require('@vercel/blob');
 
 const router = express.Router();
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/characters');
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
-  }
-});
+// Check if running in Vercel serverless
+const isVercel = process.env.VERCEL === '1';
+
+// Configure multer for image uploads (memory storage for Vercel Blob)
+const storage = isVercel
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, 'uploads/characters');
+      },
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, `${uuidv4()}${ext}`);
+      }
+    });
 
 const upload = multer({
   storage,
@@ -169,7 +175,21 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res, next) 
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    const imageUrl = `/uploads/characters/${req.file.filename}`;
+    let imageUrl;
+
+    if (isVercel) {
+      // Use Vercel Blob storage in production
+      const ext = path.extname(req.file.originalname);
+      const filename = `characters/${uuidv4()}${ext}`;
+      const blob = await put(filename, req.file.buffer, {
+        access: 'public',
+        contentType: req.file.mimetype
+      });
+      imageUrl = blob.url;
+    } else {
+      // Use local file storage in development
+      imageUrl = `/uploads/characters/${req.file.filename}`;
+    }
 
     const character = await prisma.character.update({
       where: { id: req.params.id },
