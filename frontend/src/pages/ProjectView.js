@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function ProjectView() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     fetchProject();
@@ -29,6 +31,18 @@ export default function ProjectView() {
       case 'GENERATING': return 'bg-blue-100 text-blue-800';
       case 'FAILED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleStartGeneration = async () => {
+    setStarting(true);
+    try {
+      await api.post(`/projects/${id}/start-generation`);
+      toast.success('Generation started!');
+      navigate(`/projects/${id}/progress`);
+    } catch (error) {
+      toast.error('Failed to start generation');
+      setStarting(false);
     }
   };
 
@@ -75,6 +89,15 @@ export default function ProjectView() {
             >
               Review & Export
             </Link>
+          )}
+          {project.status === 'DRAFT' && project.scenes?.length > 0 && (
+            <button
+              onClick={handleStartGeneration}
+              disabled={starting}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            >
+              {starting ? 'Starting...' : 'Start Generation'}
+            </button>
           )}
         </div>
       </div>

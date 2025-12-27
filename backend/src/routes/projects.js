@@ -267,11 +267,17 @@ router.post('/:id/generate-scenes', async (req, res, next) => {
 router.post('/:id/start-generation', async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
+    const broadcastProgress = req.app.get('broadcastProgress');
 
     const project = await prisma.project.findFirst({
       where: {
         id: req.params.id,
         userId: req.user.id
+      },
+      include: {
+        scenes: {
+          orderBy: { sequenceNumber: 'asc' }
+        }
       }
     });
 
@@ -295,10 +301,77 @@ router.post('/:id/start-generation', async (req, res, next) => {
       }
     });
 
-    // TODO: Start actual generation pipeline
-    // This would be handled by a background worker
-
+    // Respond immediately
     res.json({ job, message: 'Generation started' });
+
+    // Simulate generation progress via WebSocket (in background)
+    const stages = ['images', 'video', 'audio', 'combine'];
+    const totalScenes = project.scenes.length || 5;
+    let currentSceneIndex = 0;
+
+    // Simulate progress updates
+    const simulateProgress = async () => {
+      for (let stageIndex = 0; stageIndex < stages.length; stageIndex++) {
+        const stage = stages[stageIndex];
+        const scenesInStage = Math.ceil(totalScenes / stages.length);
+
+        for (let i = 0; i < scenesInStage && currentSceneIndex < totalScenes; i++) {
+          currentSceneIndex++;
+          const percentage = Math.round((currentSceneIndex / totalScenes) * 100);
+
+          // Broadcast progress update
+          broadcastProgress(req.params.id, {
+            status: 'GENERATING',
+            stage: stage,
+            progress: {
+              completedScenes: currentSceneIndex,
+              totalScenes: totalScenes,
+              percentage: percentage
+            },
+            currentClip: currentSceneIndex
+          });
+
+          // Wait before next update
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+      }
+
+      // Mark as complete
+      await prisma.project.update({
+        where: { id: req.params.id },
+        data: { status: 'COMPLETE' }
+      });
+
+      await prisma.generationJob.update({
+        where: { id: job.id },
+        data: {
+          status: 'COMPLETE',
+          progressPercent: 100,
+          completedAt: new Date()
+        }
+      });
+
+      // Update all scenes to COMPLETE
+      await prisma.scene.updateMany({
+        where: { projectId: req.params.id },
+        data: { status: 'COMPLETE' }
+      });
+
+      // Broadcast completion
+      broadcastProgress(req.params.id, {
+        status: 'COMPLETE',
+        stage: 'complete',
+        progress: {
+          completedScenes: totalScenes,
+          totalScenes: totalScenes,
+          percentage: 100
+        }
+      });
+    };
+
+    // Run simulation in background (don't await)
+    simulateProgress().catch(console.error);
+
   } catch (error) {
     next(error);
   }

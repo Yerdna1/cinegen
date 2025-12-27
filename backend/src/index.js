@@ -28,15 +28,19 @@ const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
 
-// WebSocket server for real-time updates
-const wss = new WebSocketServer({ server, path: '/ws' });
+// WebSocket server for real-time updates - handle all ws paths
+const wss = new WebSocketServer({ server });
 
 // Store WebSocket connections by project ID
 const projectConnections = new Map();
 
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, 'http://localhost');
-  const projectId = url.pathname.split('/').pop();
+  // Extract project ID from path like /ws/generation/{projectId} or /ws/{projectId}
+  const pathParts = url.pathname.split('/').filter(p => p);
+  const projectId = pathParts[pathParts.length - 1]; // Last segment is the project ID
+
+  console.log('WebSocket connection for project:', projectId);
 
   if (projectId) {
     if (!projectConnections.has(projectId)) {

@@ -77,6 +77,15 @@ export default function ProjectWizard() {
   });
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Scene editing state
+  const [editingScene, setEditingScene] = useState(null);
+  const [editSceneData, setEditSceneData] = useState({
+    dialogue: '',
+    cameraAngle: '',
+    emotions: '',
+    actions: ''
+  });
+
   useEffect(() => {
     fetchCharacters();
     fetchGenres();
@@ -252,6 +261,90 @@ export default function ProjectWizard() {
       navigate(`/projects/${projectId}/progress`);
     } catch (error) {
       toast.error('Failed to start generation');
+    }
+  };
+
+  const moveScene = async (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= scenes.length) return;
+
+    // Create new array with reordered scenes
+    const newScenes = [...scenes];
+    const [movedScene] = newScenes.splice(fromIndex, 1);
+    newScenes.splice(toIndex, 0, movedScene);
+
+    // Update local state immediately for responsive UI
+    setScenes(newScenes);
+
+    // If we have a projectId, persist the order to the backend
+    if (projectId) {
+      try {
+        const sceneOrder = newScenes.map(scene => scene.id);
+        await api.put(`/projects/${projectId}/scenes/reorder`, { sceneOrder });
+        toast.success('Scene order updated');
+      } catch (error) {
+        // Revert on error
+        setScenes(scenes);
+        toast.error('Failed to reorder scenes');
+      }
+    }
+  };
+
+  // Scene editing handlers
+  const openEditScene = (scene) => {
+    setEditingScene(scene);
+    setEditSceneData({
+      dialogue: scene.dialogue || '',
+      cameraAngle: scene.cameraAngle || '',
+      emotions: scene.emotions || '',
+      actions: scene.actions || ''
+    });
+  };
+
+  const saveSceneEdit = async () => {
+    if (!editingScene || !projectId) return;
+
+    try {
+      const response = await api.put(`/projects/${projectId}/scenes/${editingScene.id}`, editSceneData);
+      // Update local scenes array
+      setScenes(scenes.map(s =>
+        s.id === editingScene.id ? { ...s, ...response.data.scene } : s
+      ));
+      setEditingScene(null);
+      toast.success('Scene updated');
+    } catch (error) {
+      toast.error('Failed to update scene');
+    }
+  };
+
+  const deleteScene = async (sceneId) => {
+    if (!projectId) return;
+    if (!window.confirm('Are you sure you want to delete this scene?')) return;
+
+    try {
+      await api.delete(`/projects/${projectId}/scenes/${sceneId}`);
+      setScenes(scenes.filter(s => s.id !== sceneId));
+      toast.success('Scene deleted');
+    } catch (error) {
+      toast.error('Failed to delete scene');
+    }
+  };
+
+  const addScene = async () => {
+    if (!projectId) return;
+
+    try {
+      const newSequenceNumber = scenes.length + 1;
+      const response = await api.post(`/projects/${projectId}/scenes`, {
+        sequenceNumber: newSequenceNumber,
+        dialogue: 'New scene dialogue',
+        cameraAngle: 'medium',
+        emotions: 'neutral',
+        actions: 'standing'
+      });
+      setScenes([...scenes, response.data.scene]);
+      toast.success('Scene added');
+    } catch (error) {
+      toast.error('Failed to add scene');
     }
   };
 
@@ -490,18 +583,73 @@ export default function ProjectWizard() {
       case 7:
         return (
           <div>
-            <h3 className="font-medium mb-4">Scene Breakdown ({scenes.length} scenes)</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-medium">Scene Breakdown ({scenes.length} scenes)</h3>
+              <button
+                onClick={addScene}
+                className="px-3 py-1 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                + Add Scene
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Use the arrow buttons to reorder scenes. Click edit to modify a scene.</p>
             {scenes.length === 0 ? (
               <p className="text-gray-500">No scenes generated yet.</p>
             ) : (
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {scenes.map((scene, index) => (
-                  <div key={scene.id} className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <span className="font-medium">Scene {index + 1}</span>
-                      <span className="text-sm text-gray-500">{scene.cameraAngle}</span>
+                  <div key={scene.id} className="p-4 border rounded-lg flex items-start gap-4">
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => moveScene(index, index - 1)}
+                        disabled={index === 0}
+                        className="p-1 text-gray-500 hover:text-primary-600 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move up"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => moveScene(index, index + 1)}
+                        disabled={index === scenes.length - 1}
+                        className="p-1 text-gray-500 hover:text-primary-600 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move down"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
                     </div>
-                    <p className="mt-2 text-sm">{scene.dialogue}</p>
+                    {/* Scene content */}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium">Scene {index + 1}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">{scene.cameraAngle}</span>
+                          <button
+                            onClick={() => openEditScene(scene)}
+                            className="p-1 text-primary-600 hover:text-primary-800 hover:bg-gray-100 rounded"
+                            title="Edit scene"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => deleteScene(scene.id)}
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-gray-100 rounded"
+                            title="Delete scene"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-sm">{scene.dialogue}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -580,6 +728,94 @@ export default function ProjectWizard() {
           </button>
         )}
       </div>
+
+      {/* Edit Scene Modal */}
+      {editingScene && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={() => setEditingScene(null)} />
+            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Edit Scene</h2>
+                <button
+                  onClick={() => setEditingScene(null)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dialogue</label>
+                  <textarea
+                    value={editSceneData.dialogue}
+                    onChange={(e) => setEditSceneData({ ...editSceneData, dialogue: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter scene dialogue..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Camera Angle</label>
+                  <select
+                    value={editSceneData.cameraAngle}
+                    onChange={(e) => setEditSceneData({ ...editSceneData, cameraAngle: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="wide">Wide</option>
+                    <option value="medium">Medium</option>
+                    <option value="close-up">Close-up</option>
+                    <option value="over-the-shoulder">Over the Shoulder</option>
+                    <option value="bird-eye">Bird's Eye</option>
+                    <option value="low-angle">Low Angle</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emotions</label>
+                  <input
+                    type="text"
+                    value={editSceneData.emotions}
+                    onChange={(e) => setEditSceneData({ ...editSceneData, emotions: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="e.g., happy, sad, angry"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                  <input
+                    type="text"
+                    value={editSceneData.actions}
+                    onChange={(e) => setEditSceneData({ ...editSceneData, actions: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="e.g., walking, sitting, running"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-4 justify-end">
+                <button
+                  onClick={() => setEditingScene(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveSceneEdit}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,8 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { PlusIcon, TrashIcon, PencilIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:3001';
+
 export default function Characters() {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function Characters() {
             <div key={character.id} className="bg-white rounded-lg shadow overflow-hidden">
               <div className="aspect-square bg-gray-100 flex items-center justify-center">
                 {character.imageUrl ? (
-                  <img src={character.imageUrl} alt={character.name} className="w-full h-full object-cover" />
+                  <img src={`${API_BASE_URL}${character.imageUrl}`} alt={character.name} className="w-full h-full object-cover" />
                 ) : (
                   <UserCircleIcon className="w-24 h-24 text-gray-300" />
                 )}

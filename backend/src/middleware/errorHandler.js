@@ -18,6 +18,20 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Multer file size error
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      error: 'File too large. Maximum size is 10MB.'
+    });
+  }
+
+  // Multer file type error
+  if (err.message && err.message.includes('Invalid file type')) {
+    return res.status(400).json({
+      error: err.message
+    });
+  }
+
   // Validation errors
   if (err.name === 'ValidationError') {
     return res.status(400).json({

@@ -3,6 +3,8 @@ import { useParams, useNavigate, useBeforeUnload } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:3001';
+
 export default function CharacterForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -120,7 +122,7 @@ export default function CharacterForm() {
       setDescription(character.description || '');
       setInitialValues({ name: character.name, description: character.description || '' });
       if (character.imageUrl) {
-        setImagePreview(character.imageUrl);
+        setImagePreview(`${API_BASE_URL}${character.imageUrl}`);
       }
     } catch (error) {
       toast.error('Failed to fetch character');
