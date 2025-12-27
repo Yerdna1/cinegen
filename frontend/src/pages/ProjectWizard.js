@@ -74,8 +74,13 @@ export default function ProjectWizard() {
     setting: '',
     plot: '',
     characterIds: [],
-    voiceAssignments: {}
+    voiceAssignments: {},
+    voiceProvider: 'elevenlabs',
+    llmProvider: 'anthropic',
+    imageProvider: 'kling'
   });
+  const [voiceProviders, setVoiceProviders] = useState([]);
+  const [userPreferences, setUserPreferences] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
 
   // Scene editing state
@@ -90,6 +95,7 @@ export default function ProjectWizard() {
   useEffect(() => {
     fetchCharacters();
     fetchGenres();
+    fetchUserPreferences(); // Load user's default providers
     if (isEditing) {
       fetchProject();
     } else {
@@ -127,6 +133,26 @@ export default function ProjectWizard() {
       projectId
     });
   }, [currentStep, formData, scenes, projectId, initialLoadDone]);
+
+  const fetchUserPreferences = async () => {
+    try {
+      const response = await api.get('/users/preferences');
+      const prefs = response.data.preferences;
+      setUserPreferences(prefs);
+
+      // Update formData with user's default providers (only for new projects)
+      if (!isEditing && !loadWizardState(null)?.formData) {
+        setFormData(prev => ({
+          ...prev,
+          llmProvider: prefs.defaultLlmProvider || 'anthropic',
+          imageProvider: prefs.defaultImageProvider || 'kling',
+          voiceProvider: prefs.defaultVoiceProvider || 'elevenlabs'
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch user preferences:', error);
+    }
+  };
 
   const fetchGenres = async () => {
     try {
@@ -199,12 +225,40 @@ export default function ProjectWizard() {
     }
   };
 
-  const fetchVoices = async () => {
+  const fetchVoiceProviders = async () => {
     try {
-      const response = await api.get('/voices');
-      setVoices(response.data.voices);
+      const response = await api.get('/generation/providers');
+      const ttsProviders = response.data.tts || [];
+      setVoiceProviders(ttsProviders);
     } catch (error) {
-      console.error('Failed to fetch voices - 11Labs key may not be configured');
+      console.error('Failed to fetch TTS providers:', error);
+      // Fallback to default providers
+      setVoiceProviders([
+        { id: 'elevenlabs', name: 'ElevenLabs', available: false },
+        { id: 'modal-f5tts', name: 'F5-TTS (Modal)', available: false },
+        { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', available: false }
+      ]);
+    }
+  };
+
+  const fetchVoices = async (provider = formData.voiceProvider) => {
+    try {
+      const response = await api.get(`/generation/voices/${provider}`);
+      setVoices(response.data.voices || []);
+    } catch (error) {
+      console.error('Failed to fetch voices:', error);
+      // Try legacy endpoint as fallback for ElevenLabs
+      if (provider === 'elevenlabs') {
+        try {
+          const fallbackResponse = await api.get('/voices');
+          setVoices(fallbackResponse.data.voices || []);
+        } catch (e) {
+          console.error('Failed to fetch voices from fallback:', e);
+          setVoices([]);
+        }
+      } else {
+        setVoices([]);
+      }
     }
   };
 
