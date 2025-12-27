@@ -75,6 +75,7 @@ export default function ProjectWizard() {
     characterIds: [],
     voiceAssignments: {}
   });
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     fetchCharacters();
@@ -255,6 +256,13 @@ export default function ProjectWizard() {
   };
 
   const handleNext = async () => {
+    // Validate current step before proceeding
+    if (currentStep === 1) {
+      if (!validateStep1()) {
+        toast.error('Please fix the validation errors before proceeding');
+        return;
+      }
+    }
     await saveProject();
     if (currentStep === 6) {
       fetchVoices();
@@ -271,6 +279,40 @@ export default function ProjectWizard() {
 
   const updateFormData = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+    // Clear validation error when field is updated
+    if (validationErrors[key]) {
+      setValidationErrors(prev => ({ ...prev, [key]: null }));
+    }
+  };
+
+  const validateDuration = (value) => {
+    if (value === '' || value === null || value === undefined) {
+      return 'Duration is required';
+    }
+    const num = parseInt(value);
+    if (isNaN(num)) {
+      return 'Duration must be a valid number';
+    }
+    if (num < 6) {
+      return 'Duration must be at least 6 seconds';
+    }
+    if (num > 3600) {
+      return 'Duration cannot exceed 3600 seconds (1 hour)';
+    }
+    return null;
+  };
+
+  const validateStep1 = () => {
+    const errors = {};
+    if (!formData.name || formData.name.trim() === '') {
+      errors.name = 'Project name is required';
+    }
+    const durationError = validateDuration(formData.durationSeconds);
+    if (durationError) {
+      errors.durationSeconds = durationError;
+    }
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const renderStepContent = () => {
@@ -284,9 +326,14 @@ export default function ProjectWizard() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => updateFormData('name', e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`mt-1 block w-full px-3 py-2 border rounded-lg ${
+                  validationErrors.name ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="My Video Project"
               />
+              {validationErrors.name && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Duration (seconds) *</label>
@@ -295,12 +342,29 @@ export default function ProjectWizard() {
                 min="6"
                 max="3600"
                 value={formData.durationSeconds}
-                onChange={(e) => updateFormData('durationSeconds', parseInt(e.target.value))}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty string during typing, but validate on blur/submit
+                  updateFormData('durationSeconds', value === '' ? '' : parseInt(value) || '');
+                }}
+                onBlur={(e) => {
+                  // Validate on blur and show error if invalid
+                  const error = validateDuration(e.target.value);
+                  if (error) {
+                    setValidationErrors(prev => ({ ...prev, durationSeconds: error }));
+                  }
+                }}
+                className={`mt-1 block w-full px-3 py-2 border rounded-lg ${
+                  validationErrors.durationSeconds ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
               />
-              <p className="mt-1 text-sm text-gray-500">
-                This will generate approximately {Math.ceil(formData.durationSeconds / 6)} clips (6 seconds each)
-              </p>
+              {validationErrors.durationSeconds ? (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.durationSeconds}</p>
+              ) : (
+                <p className="mt-1 text-sm text-gray-500">
+                  This will generate approximately {Math.ceil((formData.durationSeconds || 60) / 6)} clips (6 seconds each)
+                </p>
+              )}
             </div>
           </div>
         );

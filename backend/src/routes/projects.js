@@ -46,6 +46,20 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Project name is required' });
     }
 
+    // Validate durationSeconds if provided
+    if (durationSeconds !== undefined && durationSeconds !== null) {
+      const duration = parseInt(durationSeconds);
+      if (isNaN(duration)) {
+        return res.status(400).json({ error: 'Duration must be a valid number' });
+      }
+      if (duration < 6) {
+        return res.status(400).json({ error: 'Duration must be at least 6 seconds' });
+      }
+      if (duration > 3600) {
+        return res.status(400).json({ error: 'Duration cannot exceed 3600 seconds (1 hour)' });
+      }
+    }
+
     const project = await prisma.project.create({
       data: {
         userId: req.user.id,
@@ -101,6 +115,20 @@ router.put('/:id', async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
     const { name, durationSeconds, genre, setting, plot, characterIds, voiceAssignments } = req.body;
+
+    // Validate durationSeconds if provided
+    if (durationSeconds !== undefined && durationSeconds !== null) {
+      const duration = parseInt(durationSeconds);
+      if (isNaN(duration)) {
+        return res.status(400).json({ error: 'Duration must be a valid number' });
+      }
+      if (duration < 6) {
+        return res.status(400).json({ error: 'Duration must be at least 6 seconds' });
+      }
+      if (duration > 3600) {
+        return res.status(400).json({ error: 'Duration cannot exceed 3600 seconds (1 hour)' });
+      }
+    }
 
     // Check ownership
     const existing = await prisma.project.findFirst({
