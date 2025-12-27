@@ -231,6 +231,7 @@
     "providers": {
       "claudeOauth": "Uses your Claude subscription (run: claude setup-token)",
       "hailuo": "For video generation",
+      "piapi": "For high-quality video generation",
       "gemini": "For AI image generation (Gemini API)",
       "elevenlabs": "For voice/audio generation",
       "anthropic": "Direct API access (separate credits)",
@@ -250,6 +251,12 @@
     "imageProviders": {
       "kling": "Via official API",
       "gemini": "Gemini 3 Pro Image Generation",
+      "modal": "Self-hosted on Modal.com"
+    },
+    "videoProvider": "Video Provider",
+    "videoProviders": {
+      "piapi": "High-quality video generation",
+      "kling": "Via official Kling API",
       "modal": "Self-hosted on Modal.com"
     },
     "voiceProvider": "Voice Provider (for TTS)",

@@ -12,7 +12,8 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   PencilIcon,
-  XMarkIcon
+  XMarkIcon,
+  FilmIcon
 } from '@heroicons/react/24/outline';
 
 export default function Settings() {
@@ -23,7 +24,10 @@ export default function Settings() {
   const [preferences, setPreferences] = useState({
     defaultLlmProvider: 'anthropic',
     defaultImageProvider: 'kling',
+    defaultVideoProvider: 'piapi',
     defaultVoiceProvider: 'elevenlabs',
+    defaultVideoModel: 'kling-v2-master',
+    defaultImageModel: 'kling-v2',
     modalChatterboxEndpoint: '',
     modalCoquiTtsEndpoint: '',
     modalHallo3Endpoint: '',
@@ -41,6 +45,7 @@ export default function Settings() {
   const providers = [
     { id: 'claude-oauth', name: 'Claude Code OAuth', description: t('settings.providers.claudeOauth'), isOAuth: true },
     { id: 'hailuo', name: 'Hailuo/Kling', description: t('settings.providers.hailuo') },
+    { id: 'piapi', name: 'PiAPI', description: t('settings.providers.piapi') },
     { id: 'nanobanana', name: 'Google Gemini', description: t('settings.providers.gemini') },
     { id: '11labs', name: '11Labs', description: t('settings.providers.elevenlabs') },
     { id: 'anthropic', name: 'Anthropic API', description: t('settings.providers.anthropic') },
@@ -50,22 +55,62 @@ export default function Settings() {
   ];
 
   const llmProviderOptions = [
-    { id: 'claude-sdk', name: 'Claude SDK (OAuth)', description: t('settings.llmProviders.claudeSdk') },
+    { id: 'claude-sdk', name: 'Claude SDK', description: t('settings.llmProviders.claudeSdk') },
     { id: 'anthropic', name: 'Anthropic API', description: t('settings.llmProviders.anthropic') },
-    { id: 'modal', name: 'Modal.com (Qwen)', description: t('settings.llmProviders.modal') }
+    { id: 'modal', name: 'Modal (Qwen)', description: t('settings.llmProviders.modal') }
   ];
 
   const imageProviderOptions = [
     { id: 'kling', name: 'Kling AI', description: t('settings.imageProviders.kling') },
-    { id: 'nanobanana', name: 'Google Gemini', description: t('settings.imageProviders.gemini') },
-    { id: 'modal', name: 'Modal.com (Flux)', description: t('settings.imageProviders.modal') }
+    { id: 'nanobanana', name: 'Gemini', description: t('settings.imageProviders.gemini') },
+    { id: 'modal', name: 'Modal (Flux)', description: t('settings.imageProviders.modal') }
+  ];
+
+  const videoProviderOptions = [
+    { id: 'piapi', name: 'PiAPI', description: t('settings.videoProviders.piapi') },
+    { id: 'kling', name: 'Kling AI', description: t('settings.videoProviders.kling') },
+    { id: 'modal', name: 'Modal', description: t('settings.videoProviders.modal') }
   ];
 
   const voiceProviderOptions = [
     { id: 'elevenlabs', name: 'ElevenLabs', description: t('settings.voiceProviders.elevenlabs') },
-    { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', description: t('settings.voiceProviders.chatterbox') },
-    { id: 'modal-coqui', name: 'Coqui TTS (Modal)', description: t('settings.voiceProviders.coqui') }
+    { id: 'modal-chatterbox', name: 'Chatterbox', description: t('settings.voiceProviders.chatterbox') },
+    { id: 'modal-coqui', name: 'Coqui TTS', description: t('settings.voiceProviders.coqui') }
   ];
+
+  // Video model options for Kling
+  const videoModelOptions = {
+    kling: [
+      { id: 'kling-v2-master', name: 'Kling 2.1 Master', description: 'Highest quality, slower' },
+      { id: 'kling-v2', name: 'Kling 2.0', description: 'Balanced quality and speed' },
+      { id: 'kling-v1-6', name: 'Kling 1.6', description: 'Faster, good quality' },
+      { id: 'kling-v1-5', name: 'Kling 1.5', description: 'Fast, standard quality' }
+    ],
+    piapi: [
+      { id: 'kling-v2-master', name: 'Kling 2.1 Master', description: 'Via PiAPI - highest quality' },
+      { id: 'kling-v2', name: 'Kling 2.0', description: 'Via PiAPI - balanced' },
+      { id: 'kling-v1-6', name: 'Kling 1.6', description: 'Via PiAPI - faster' }
+    ],
+    modal: [
+      { id: 'default', name: 'Default', description: 'Self-hosted model' }
+    ]
+  };
+
+  // Image model options for Kling
+  const imageModelOptions = {
+    kling: [
+      { id: 'kling-v2', name: 'Kling 2.0', description: 'Latest image model' },
+      { id: 'kling-v1-5', name: 'Kling 1.5', description: 'Previous version' }
+    ],
+    nanobanana: [
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', description: 'Fast image generation' },
+      { id: 'imagen-3.0-generate-002', name: 'Imagen 3.0', description: 'High quality images' }
+    ],
+    modal: [
+      { id: 'flux-schnell', name: 'Flux Schnell', description: 'Fast generation' },
+      { id: 'flux-dev', name: 'Flux Dev', description: 'Higher quality' }
+    ]
+  };
 
   useEffect(() => {
     fetchApiKeys();
@@ -153,6 +198,102 @@ export default function Settings() {
     }
   };
 
+  const ProviderSelector = ({ label, options, value, onChange }) => (
+    <div>
+      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+        {label}
+      </label>
+      <div className="space-y-2">
+        {options.map(opt => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className="w-full p-3 rounded-lg text-left transition-all duration-200 flex items-center gap-3"
+            style={{
+              backgroundColor: value === opt.id ? 'var(--color-accent-subtle)' : 'var(--color-bg-surface)',
+              border: value === opt.id ? '2px solid var(--color-accent)' : '2px solid transparent'
+            }}
+          >
+            {value === opt.id && (
+              <CheckCircleIcon className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--color-accent)' }} />
+            )}
+            <div className="flex-1 min-w-0">
+              <span className="font-medium text-sm block" style={{ color: 'var(--color-text-primary)' }}>{opt.name}</span>
+              <span className="text-xs block truncate" style={{ color: 'var(--color-text-muted)' }}>{opt.description}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const ModelSelector = ({ label, options, value, onChange }) => {
+    if (!options || options.length === 0) return null;
+    return (
+      <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+        <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>
+          {label}
+        </label>
+        <select
+          value={value || options[0]?.id}
+          onChange={(e) => onChange(e.target.value)}
+          className="cinema-input w-full text-sm"
+        >
+          {options.map(opt => (
+            <option key={opt.id} value={opt.id}>
+              {opt.name} - {opt.description}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
+  const ProviderWithModelSelector = ({ label, providerOptions, modelOptionsMap, providerValue, modelValue, onProviderChange, onModelChange }) => (
+    <div>
+      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+        {label}
+      </label>
+      <div className="space-y-2">
+        {providerOptions.map(opt => (
+          <div
+            key={opt.id}
+            className="rounded-lg transition-all duration-200"
+            style={{
+              backgroundColor: providerValue === opt.id ? 'var(--color-accent-subtle)' : 'var(--color-bg-surface)',
+              border: providerValue === opt.id ? '2px solid var(--color-accent)' : '2px solid transparent'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onProviderChange(opt.id)}
+              className="w-full p-3 text-left flex items-center gap-3"
+            >
+              {providerValue === opt.id && (
+                <CheckCircleIcon className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--color-accent)' }} />
+              )}
+              <div className="flex-1 min-w-0">
+                <span className="font-medium text-sm block" style={{ color: 'var(--color-text-primary)' }}>{opt.name}</span>
+                <span className="text-xs block truncate" style={{ color: 'var(--color-text-muted)' }}>{opt.description}</span>
+              </div>
+            </button>
+            {providerValue === opt.id && modelOptionsMap[opt.id] && modelOptionsMap[opt.id].length > 1 && (
+              <div className="px-3 pb-3">
+                <ModelSelector
+                  label="Model"
+                  options={modelOptionsMap[opt.id]}
+                  value={modelValue}
+                  onChange={onModelChange}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -162,7 +303,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-display font-bold" style={{ color: 'var(--color-text-primary)' }}>
@@ -173,268 +314,212 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* Profile Section */}
-      <div className="cinema-card overflow-hidden">
-        <div
-          className="px-6 py-4 flex items-center gap-3"
-          style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
-        >
-          <UserCircleIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
-          <h2 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('settings.profile')}
-          </h2>
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                {t('settings.email')}
-              </label>
-              <p className="mt-1 font-medium" style={{ color: 'var(--color-text-primary)' }}>{user?.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                {t('settings.role')}
-              </label>
-              <p className="mt-1">
-                <span
-                  className="px-2.5 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor: user?.role === 'ADMIN' ? 'rgba(139, 92, 246, 0.1)' : 'var(--color-bg-surface)',
-                    color: user?.role === 'ADMIN' ? '#8B5CF6' : 'var(--color-text-secondary)'
-                  }}
-                >
-                  {user?.role}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Default Providers Section */}
-      <div className="cinema-card overflow-hidden">
-        <div
-          className="px-6 py-4 flex items-center gap-3"
-          style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
-        >
-          <Cog6ToothIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
-          <h2 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('settings.defaultProviders')}
-          </h2>
-        </div>
-        <div className="p-6">
-          <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
-            {t('settings.defaultProvidersDesc')}
-          </p>
-
-          <div className="space-y-6">
-            {/* LLM Provider */}
-            <div>
-              <label className="block text-sm font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('settings.llmProvider')}
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {llmProviderOptions.map(opt => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => updatePreference('defaultLlmProvider', opt.id)}
-                    className="p-4 rounded-lg text-left transition-all duration-200"
-                    style={{
-                      backgroundColor: preferences.defaultLlmProvider === opt.id ? 'var(--color-accent-subtle)' : 'var(--color-bg-surface)',
-                      border: preferences.defaultLlmProvider === opt.id ? '2px solid var(--color-accent)' : '2px solid transparent'
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      {preferences.defaultLlmProvider === opt.id && (
-                        <CheckCircleIcon className="w-4 h-4" style={{ color: 'var(--color-accent)' }} />
-                      )}
-                      <span className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>{opt.name}</span>
-                    </div>
-                    <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{opt.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Image Provider */}
-            <div>
-              <label className="block text-sm font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('settings.imageProvider')}
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {imageProviderOptions.map(opt => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => updatePreference('defaultImageProvider', opt.id)}
-                    className="p-4 rounded-lg text-left transition-all duration-200"
-                    style={{
-                      backgroundColor: preferences.defaultImageProvider === opt.id ? 'var(--color-accent-subtle)' : 'var(--color-bg-surface)',
-                      border: preferences.defaultImageProvider === opt.id ? '2px solid var(--color-accent)' : '2px solid transparent'
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      {preferences.defaultImageProvider === opt.id && (
-                        <CheckCircleIcon className="w-4 h-4" style={{ color: 'var(--color-accent)' }} />
-                      )}
-                      <span className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>{opt.name}</span>
-                    </div>
-                    <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{opt.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Voice Provider */}
-            <div>
-              <label className="block text-sm font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('settings.voiceProvider')}
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {voiceProviderOptions.map(opt => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => updatePreference('defaultVoiceProvider', opt.id)}
-                    className="p-4 rounded-lg text-left transition-all duration-200"
-                    style={{
-                      backgroundColor: preferences.defaultVoiceProvider === opt.id ? 'var(--color-accent-subtle)' : 'var(--color-bg-surface)',
-                      border: preferences.defaultVoiceProvider === opt.id ? '2px solid var(--color-accent)' : '2px solid transparent'
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      {preferences.defaultVoiceProvider === opt.id && (
-                        <CheckCircleIcon className="w-4 h-4" style={{ color: 'var(--color-accent)' }} />
-                      )}
-                      <span className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>{opt.name}</span>
-                    </div>
-                    <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{opt.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleSavePreferences}
-              disabled={savingPrefs}
-              className="cinema-btn w-full"
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <div className="space-y-6">
+          {/* Profile Section */}
+          <div className="cinema-card overflow-hidden">
+            <div
+              className="px-5 py-3 flex items-center gap-3"
+              style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
             >
-              {savingPrefs ? t('common.saving') : t('settings.saveProviders')}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal.com Endpoints Section */}
-      <div className="cinema-card overflow-hidden">
-        <div
-          className="px-6 py-4 flex items-center gap-3"
-          style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
-        >
-          <ServerIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
-          <h2 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('settings.modalEndpoints')}
-          </h2>
-        </div>
-        <div className="p-6">
-          <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
-            {t('settings.modalEndpointsDesc')}
-          </p>
-
-          <div className="space-y-4">
-            {[
-              { key: 'modalChatterboxEndpoint', label: 'Chatterbox TTS', placeholder: 'https://username--chatterbox-tts...', desc: t('settings.endpoints.chatterbox') },
-              { key: 'modalCoquiTtsEndpoint', label: 'Coqui TTS', placeholder: 'https://username--coqui-tts...', desc: t('settings.endpoints.coqui') },
-              { key: 'modalHallo3Endpoint', label: 'Hallo3 (Lip Sync)', placeholder: 'https://username--hallo3...', desc: t('settings.endpoints.hallo3') },
-              { key: 'modalMusicEndpoint', label: 'Music Generator', placeholder: 'https://username--music...', desc: t('settings.endpoints.music') },
-              { key: 'modalImageEndpoint', label: 'Image Generation (Flux)', placeholder: 'https://username--flux...', desc: t('settings.endpoints.image') },
-              { key: 'modalFileS3Endpoint', label: 'File to S3', placeholder: 'https://username--file-to-s3...', desc: t('settings.endpoints.fileS3') }
-            ].map(({ key, label, placeholder, desc }) => (
-              <div key={key}>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  {label}
+              <UserCircleIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+              <h2 className="font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {t('settings.profile')}
+              </h2>
+            </div>
+            <div className="p-5 grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                  {t('settings.email')}
                 </label>
-                <input
-                  type="text"
-                  value={preferences[key] || ''}
-                  onChange={(e) => updatePreference(key, e.target.value)}
-                  placeholder={placeholder}
-                  className="cinema-input w-full text-sm"
-                />
-                <p className="text-xs mt-1" style={{ color: 'var(--color-text-subtle)' }}>{desc}</p>
+                <p className="mt-1 font-medium text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>{user?.email}</p>
               </div>
-            ))}
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                  {t('settings.role')}
+                </label>
+                <p className="mt-1">
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-medium"
+                    style={{
+                      backgroundColor: user?.role === 'ADMIN' ? 'rgba(139, 92, 246, 0.1)' : 'var(--color-bg-surface)',
+                      color: user?.role === 'ADMIN' ? '#8B5CF6' : 'var(--color-text-secondary)'
+                    }}
+                  >
+                    {user?.role}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
 
-            <button
-              onClick={handleSavePreferences}
-              disabled={savingPrefs}
-              className="cinema-btn w-full"
+          {/* Default Providers Section */}
+          <div className="cinema-card overflow-hidden">
+            <div
+              className="px-5 py-3 flex items-center gap-3"
+              style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
             >
-              {savingPrefs ? t('common.saving') : t('settings.saveEndpoints')}
-            </button>
+              <Cog6ToothIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+              <h2 className="font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {t('settings.defaultProviders')}
+              </h2>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <ProviderSelector
+                  label={t('settings.llmProvider')}
+                  options={llmProviderOptions}
+                  value={preferences.defaultLlmProvider}
+                  onChange={(v) => updatePreference('defaultLlmProvider', v)}
+                />
+                <ProviderWithModelSelector
+                  label={t('settings.imageProvider')}
+                  providerOptions={imageProviderOptions}
+                  modelOptionsMap={imageModelOptions}
+                  providerValue={preferences.defaultImageProvider}
+                  modelValue={preferences.defaultImageModel}
+                  onProviderChange={(v) => {
+                    updatePreference('defaultImageProvider', v);
+                    // Set default model for new provider
+                    const models = imageModelOptions[v];
+                    if (models && models.length > 0) {
+                      updatePreference('defaultImageModel', models[0].id);
+                    }
+                  }}
+                  onModelChange={(v) => updatePreference('defaultImageModel', v)}
+                />
+                <ProviderWithModelSelector
+                  label={t('settings.videoProvider')}
+                  providerOptions={videoProviderOptions}
+                  modelOptionsMap={videoModelOptions}
+                  providerValue={preferences.defaultVideoProvider}
+                  modelValue={preferences.defaultVideoModel}
+                  onProviderChange={(v) => {
+                    updatePreference('defaultVideoProvider', v);
+                    // Set default model for new provider
+                    const models = videoModelOptions[v];
+                    if (models && models.length > 0) {
+                      updatePreference('defaultVideoModel', models[0].id);
+                    }
+                  }}
+                  onModelChange={(v) => updatePreference('defaultVideoModel', v)}
+                />
+                <ProviderSelector
+                  label={t('settings.voiceProvider')}
+                  options={voiceProviderOptions}
+                  value={preferences.defaultVoiceProvider}
+                  onChange={(v) => updatePreference('defaultVoiceProvider', v)}
+                />
+              </div>
+              <button
+                onClick={handleSavePreferences}
+                disabled={savingPrefs}
+                className="cinema-btn w-full"
+              >
+                {savingPrefs ? t('common.saving') : t('settings.saveProviders')}
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* API Keys Section */}
-      <div className="cinema-card overflow-hidden">
-        <div
-          className="px-6 py-4 flex items-center gap-3"
-          style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
-        >
-          <KeyIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
-          <h2 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('settings.apiKeys')}
-          </h2>
-        </div>
-        <div className="p-6">
-          <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
-            {t('settings.apiKeysDesc')}
-          </p>
-
-          <div className="space-y-4">
-            {providers.map(provider => (
-              <ApiKeyInput
-                key={provider.id}
-                provider={provider}
-                currentKey={apiKeys[provider.id]}
-                onSave={(value) => handleSaveKey(provider.id, value)}
-                saving={saving[provider.id]}
-                t={t}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div
-        className="cinema-card overflow-hidden"
-        style={{ border: '1px solid rgba(239, 68, 68, 0.3)' }}
-      >
-        <div
-          className="px-6 py-4 flex items-center gap-3"
-          style={{ borderBottom: '1px solid rgba(239, 68, 68, 0.2)', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}
-        >
-          <ExclamationTriangleIcon className="w-5 h-5 text-red-500" />
-          <h2 className="text-lg font-display font-semibold text-red-500">
-            {t('settings.dangerZone')}
-          </h2>
-        </div>
-        <div className="p-6">
-          <p className="text-sm mb-4" style={{ color: 'var(--color-text-muted)' }}>
-            {t('settings.dangerZoneDesc')}
-          </p>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="px-4 py-2 rounded-lg font-medium transition-colors bg-red-500/10 text-red-500 hover:bg-red-500/20"
+          {/* Danger Zone */}
+          <div
+            className="cinema-card overflow-hidden"
+            style={{ border: '1px solid rgba(239, 68, 68, 0.3)' }}
           >
-            {t('settings.deleteAccount')}
-          </button>
+            <div
+              className="px-5 py-3 flex items-center gap-3"
+              style={{ borderBottom: '1px solid rgba(239, 68, 68, 0.2)', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}
+            >
+              <ExclamationTriangleIcon className="w-5 h-5 text-red-500" />
+              <h2 className="font-display font-semibold text-red-500">
+                {t('settings.dangerZone')}
+              </h2>
+            </div>
+            <div className="p-5">
+              <p className="text-sm mb-3" style={{ color: 'var(--color-text-muted)' }}>
+                {t('settings.dangerZoneDesc')}
+              </p>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-red-500/10 text-red-500 hover:bg-red-500/20"
+              >
+                {t('settings.deleteAccount')}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* Modal.com Endpoints Section */}
+          <div className="cinema-card overflow-hidden">
+            <div
+              className="px-5 py-3 flex items-center gap-3"
+              style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+            >
+              <ServerIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+              <h2 className="font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {t('settings.modalEndpoints')}
+              </h2>
+            </div>
+            <div className="p-5 space-y-4">
+              {[
+                { key: 'modalChatterboxEndpoint', label: 'Chatterbox TTS' },
+                { key: 'modalCoquiTtsEndpoint', label: 'Coqui TTS' },
+                { key: 'modalHallo3Endpoint', label: 'Hallo3 (Lip Sync)' },
+                { key: 'modalMusicEndpoint', label: 'Music Generator' },
+                { key: 'modalImageEndpoint', label: 'Image Gen (Flux)' },
+                { key: 'modalFileS3Endpoint', label: 'File to S3' }
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                    {label}
+                  </label>
+                  <input
+                    type="text"
+                    value={preferences[key] || ''}
+                    onChange={(e) => updatePreference(key, e.target.value)}
+                    placeholder="https://username--endpoint.modal.run"
+                    className="cinema-input w-full text-sm"
+                  />
+                </div>
+              ))}
+              <button
+                onClick={handleSavePreferences}
+                disabled={savingPrefs}
+                className="cinema-btn w-full"
+              >
+                {savingPrefs ? t('common.saving') : t('settings.saveEndpoints')}
+              </button>
+            </div>
+          </div>
+
+          {/* API Keys Section */}
+          <div className="cinema-card overflow-hidden">
+            <div
+              className="px-5 py-3 flex items-center gap-3"
+              style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+            >
+              <KeyIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+              <h2 className="font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {t('settings.apiKeys')}
+              </h2>
+            </div>
+            <div className="p-5 space-y-3">
+              {providers.map(provider => (
+                <ApiKeyInput
+                  key={provider.id}
+                  provider={provider}
+                  currentKey={apiKeys[provider.id]}
+                  onSave={(value) => handleSaveKey(provider.id, value)}
+                  saving={saving[provider.id]}
+                  t={t}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -501,17 +586,17 @@ function ApiKeyInput({ provider, currentKey, onSave, saving, t }) {
 
   return (
     <div
-      className="p-4 rounded-lg transition-colors"
+      className="p-3 rounded-lg transition-colors"
       style={{ backgroundColor: 'var(--color-bg-surface)' }}
     >
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <h3 className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{provider.name}</h3>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{provider.description}</p>
+      <div className="flex justify-between items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>{provider.name}</h3>
+          <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{provider.description}</p>
         </div>
         {currentKey?.hasKey && !editing && (
           <span
-            className="text-sm font-mono px-2 py-1 rounded"
+            className="text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0"
             style={{ backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-muted)' }}
           >
             {currentKey.maskedKey}
@@ -520,36 +605,36 @@ function ApiKeyInput({ provider, currentKey, onSave, saving, t }) {
       </div>
 
       {editing ? (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-2 flex gap-2">
           <input
             type="password"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={t('settings.enterApiKey')}
-            className="cinema-input flex-1 text-sm"
+            className="cinema-input flex-1 text-sm py-1.5"
           />
           <button
             onClick={handleSave}
             disabled={saving || !value}
-            className="cinema-btn text-sm py-2"
+            className="cinema-btn text-xs py-1.5 px-3"
           >
-            {saving ? t('common.saving') : t('common.save')}
+            {saving ? '...' : t('common.save')}
           </button>
           <button
             onClick={() => { setEditing(false); setValue(''); }}
-            className="p-2 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
             style={{ backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-muted)' }}
           >
-            <XMarkIcon className="w-5 h-5" />
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
       ) : (
         <button
           onClick={() => setEditing(true)}
-          className="mt-3 text-sm font-medium flex items-center gap-1 transition-colors"
+          className="mt-2 text-xs font-medium flex items-center gap-1 transition-colors"
           style={{ color: 'var(--color-accent)' }}
         >
-          <PencilIcon className="w-4 h-4" />
+          <PencilIcon className="w-3 h-3" />
           {currentKey?.hasKey ? t('settings.updateKey') : t('settings.addKey')}
         </button>
       )}

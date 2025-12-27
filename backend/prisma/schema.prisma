@@ -37,7 +37,12 @@ model UserPreferences {
   // Default providers for new projects
   defaultLlmProvider     String?  @default("anthropic") @map("default_llm_provider")
   defaultImageProvider   String?  @default("kling") @map("default_image_provider")
+  defaultVideoProvider   String?  @default("piapi") @map("default_video_provider")
   defaultVoiceProvider   String?  @default("elevenlabs") @map("default_voice_provider")
+
+  // Default models within providers
+  defaultVideoModel      String?  @default("kling-v2-master") @map("default_video_model")
+  defaultImageModel      String?  @default("kling-v2") @map("default_image_model")
 
   // Modal.com endpoints (per-user configuration)
   // Based on actual deployed apps from Modal CLI

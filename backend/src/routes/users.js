@@ -171,7 +171,11 @@ router.get('/preferences', async (req, res, next) => {
       preferences: {
         defaultLlmProvider: preferences.defaultLlmProvider,
         defaultImageProvider: preferences.defaultImageProvider,
+        defaultVideoProvider: preferences.defaultVideoProvider,
         defaultVoiceProvider: preferences.defaultVoiceProvider,
+        // Default models
+        defaultVideoModel: preferences.defaultVideoModel,
+        defaultImageModel: preferences.defaultImageModel,
         // Modal.com endpoints
         modalChatterboxEndpoint: preferences.modalChatterboxEndpoint,
         modalCoquiTtsEndpoint: preferences.modalCoquiTtsEndpoint,
@@ -193,7 +197,10 @@ router.put('/preferences', async (req, res, next) => {
     const {
       defaultLlmProvider,
       defaultImageProvider,
+      defaultVideoProvider,
       defaultVoiceProvider,
+      defaultVideoModel,
+      defaultImageModel,
       modalChatterboxEndpoint,
       modalCoquiTtsEndpoint,
       modalHallo3Endpoint,
@@ -203,9 +210,9 @@ router.put('/preferences', async (req, res, next) => {
     } = req.body;
 
     // Validate providers
-    // Note: PiAPI only supports video generation, not images
     const validLlmProviders = ['anthropic', 'modal', 'claude-sdk'];
     const validImageProviders = ['kling', 'nanobanana', 'modal'];
+    const validVideoProviders = ['piapi', 'kling', 'modal'];
     const validVoiceProviders = ['elevenlabs', 'modal-f5tts', 'modal-chatterbox', 'modal-coqui'];
 
     if (defaultLlmProvider && !validLlmProviders.includes(defaultLlmProvider)) {
@@ -213,6 +220,9 @@ router.put('/preferences', async (req, res, next) => {
     }
     if (defaultImageProvider && !validImageProviders.includes(defaultImageProvider)) {
       return res.status(400).json({ error: 'Invalid image provider' });
+    }
+    if (defaultVideoProvider && !validVideoProviders.includes(defaultVideoProvider)) {
+      return res.status(400).json({ error: 'Invalid video provider' });
     }
     if (defaultVoiceProvider && !validVoiceProviders.includes(defaultVoiceProvider)) {
       return res.status(400).json({ error: 'Invalid voice provider' });
@@ -222,7 +232,10 @@ router.put('/preferences', async (req, res, next) => {
     const updateData = {};
     if (defaultLlmProvider !== undefined) updateData.defaultLlmProvider = defaultLlmProvider;
     if (defaultImageProvider !== undefined) updateData.defaultImageProvider = defaultImageProvider;
+    if (defaultVideoProvider !== undefined) updateData.defaultVideoProvider = defaultVideoProvider;
     if (defaultVoiceProvider !== undefined) updateData.defaultVoiceProvider = defaultVoiceProvider;
+    if (defaultVideoModel !== undefined) updateData.defaultVideoModel = defaultVideoModel;
+    if (defaultImageModel !== undefined) updateData.defaultImageModel = defaultImageModel;
     if (modalChatterboxEndpoint !== undefined) updateData.modalChatterboxEndpoint = modalChatterboxEndpoint;
     if (modalCoquiTtsEndpoint !== undefined) updateData.modalCoquiTtsEndpoint = modalCoquiTtsEndpoint;
     if (modalHallo3Endpoint !== undefined) updateData.modalHallo3Endpoint = modalHallo3Endpoint;
@@ -244,7 +257,10 @@ router.put('/preferences', async (req, res, next) => {
       preferences: {
         defaultLlmProvider: preferences.defaultLlmProvider,
         defaultImageProvider: preferences.defaultImageProvider,
+        defaultVideoProvider: preferences.defaultVideoProvider,
         defaultVoiceProvider: preferences.defaultVoiceProvider,
+        defaultVideoModel: preferences.defaultVideoModel,
+        defaultImageModel: preferences.defaultImageModel,
         modalChatterboxEndpoint: preferences.modalChatterboxEndpoint,
         modalCoquiTtsEndpoint: preferences.modalCoquiTtsEndpoint,
         modalHallo3Endpoint: preferences.modalHallo3Endpoint,

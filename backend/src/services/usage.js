@@ -13,7 +13,9 @@ class UsageService {
    */
   async recordLLMUsage(userId, { provider, model, operation, inputTokens, outputTokens, cost, metadata }) {
     const totalTokens = (inputTokens || 0) + (outputTokens || 0);
-    return this.prisma.usageRecord.create({
+
+    // Create usage record
+    const record = await this.prisma.usageRecord.create({
       data: {
         userId,
         category: 'llm',
@@ -27,13 +29,20 @@ class UsageService {
         metadata: metadata ? JSON.stringify(metadata) : null
       }
     });
+
+    // Deduct cost from credit balance
+    if (cost && cost > 0) {
+      await this.deductCredits(userId, cost);
+    }
+
+    return record;
   }
 
   /**
    * Record image generation usage
    */
   async recordImageUsage(userId, { provider, operation, count, cost, metadata }) {
-    return this.prisma.usageRecord.create({
+    const record = await this.prisma.usageRecord.create({
       data: {
         userId,
         category: 'image',
@@ -44,13 +53,20 @@ class UsageService {
         metadata: metadata ? JSON.stringify(metadata) : null
       }
     });
+
+    // Deduct cost from credit balance
+    if (cost && cost > 0) {
+      await this.deductCredits(userId, cost);
+    }
+
+    return record;
   }
 
   /**
    * Record video generation usage
    */
   async recordVideoUsage(userId, { provider, operation, count, cost, metadata }) {
-    return this.prisma.usageRecord.create({
+    const record = await this.prisma.usageRecord.create({
       data: {
         userId,
         category: 'video',
@@ -61,13 +77,20 @@ class UsageService {
         metadata: metadata ? JSON.stringify(metadata) : null
       }
     });
+
+    // Deduct cost from credit balance
+    if (cost && cost > 0) {
+      await this.deductCredits(userId, cost);
+    }
+
+    return record;
   }
 
   /**
    * Record audio/TTS generation usage
    */
   async recordAudioUsage(userId, { provider, operation, durationSeconds, cost, metadata }) {
-    return this.prisma.usageRecord.create({
+    const record = await this.prisma.usageRecord.create({
       data: {
         userId,
         category: 'audio',
@@ -78,13 +101,20 @@ class UsageService {
         metadata: metadata ? JSON.stringify(metadata) : null
       }
     });
+
+    // Deduct cost from credit balance
+    if (cost && cost > 0) {
+      await this.deductCredits(userId, cost);
+    }
+
+    return record;
   }
 
   /**
    * Record TTS usage (alias for audio)
    */
   async recordTTSUsage(userId, { provider, operation, durationSeconds, cost, metadata }) {
-    return this.prisma.usageRecord.create({
+    const record = await this.prisma.usageRecord.create({
       data: {
         userId,
         category: 'tts',
@@ -95,6 +125,13 @@ class UsageService {
         metadata: metadata ? JSON.stringify(metadata) : null
       }
     });
+
+    // Deduct cost from credit balance
+    if (cost && cost > 0) {
+      await this.deductCredits(userId, cost);
+    }
+
+    return record;
   }
 
   /**

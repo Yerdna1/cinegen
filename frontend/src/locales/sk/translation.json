@@ -231,6 +231,7 @@
     "providers": {
       "claudeOauth": "Používa vaše Claude predplatné (spustite: claude setup-token)",
       "hailuo": "Pre generovanie videa",
+      "piapi": "Pre vysokokvalitné generovanie videa",
       "gemini": "Pre AI generovanie obrázkov (Gemini API)",
       "elevenlabs": "Pre generovanie hlasu/zvuku",
       "anthropic": "Priamy API prístup (samostatné kredity)",
@@ -250,6 +251,12 @@
     "imageProviders": {
       "kling": "Cez oficiálne API",
       "gemini": "Gemini 3 Pro generovanie obrázkov",
+      "modal": "Vlastný hosting na Modal.com"
+    },
+    "videoProvider": "Poskytovateľ videa",
+    "videoProviders": {
+      "piapi": "Vysokokvalitné generovanie videa",
+      "kling": "Cez oficiálne Kling API",
       "modal": "Vlastný hosting na Modal.com"
     },
     "voiceProvider": "Poskytovateľ hlasu (pre TTS)",

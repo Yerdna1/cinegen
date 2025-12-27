@@ -23,6 +23,7 @@ router.get('/users', async (req, res, next) => {
           email: true,
           role: true,
           emailVerified: true,
+          creditBalance: true,
           createdAt: true,
           _count: {
             select: {
@@ -97,6 +98,93 @@ router.get('/users/:id', async (req, res, next) => {
     }
 
     res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/admin/users/:id/add-credits
+router.post('/users/:id/add-credits', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const { amount, reason } = req.body;
+    const userId = req.params.id;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Amount must be a positive number' });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, creditBalance: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Add credits
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { creditBalance: { increment: parseFloat(amount) } },
+      select: { id: true, email: true, creditBalance: true }
+    });
+
+    // Record the credit addition as a usage record
+    await prisma.usageRecord.create({
+      data: {
+        userId,
+        category: 'credit',
+        provider: 'admin',
+        operation: 'add',
+        cost: -parseFloat(amount), // Negative = credit added
+        metadata: JSON.stringify({ reason, addedBy: req.user.id, addedByEmail: req.user.email })
+      }
+    });
+
+    res.json({
+      success: true,
+      user: updatedUser,
+      message: `Added $${amount} credits to ${user.email}`
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/admin/users/:id/usage
+router.get('/users/:id/usage', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const userId = req.params.id;
+
+    const [user, usageRecords] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, creditBalance: true }
+      }),
+      prisma.usageRecord.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 50
+      })
+    ]);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Calculate total cost
+    const totalCost = usageRecords
+      .filter(r => r.category !== 'credit')
+      .reduce((sum, r) => sum + (r.cost || 0), 0);
+
+    res.json({
+      user,
+      totalCost,
+      usageRecords
+    });
   } catch (error) {
     next(error);
   }
