@@ -37,10 +37,45 @@ model UserPreferences {
   defaultVoiceProvider   String?  @default("elevenlabs") @map("default_voice_provider")
 
   // Modal.com endpoints (per-user configuration)
-  modalLlmEndpoint       String?  @map("modal_llm_endpoint")
-  modalImageEndpoint     String?  @map("modal_image_endpoint")
-  modalF5ttsEndpoint     String?  @map("modal_f5tts_endpoint")
-  modalChatterboxEndpoint String? @map("modal_chatterbox_endpoint")
+  // LLM endpoints
+  modalLlmEndpoint           String?  @map("modal_llm_endpoint")
+  modalLlmQwenEndpoint       String?  @map("modal_llm_qwen_endpoint")
+
+  // Image generation endpoints
+  modalImageEndpoint         String?  @map("modal_image_endpoint")
+  modalFluxEndpoint          String?  @map("modal_flux_endpoint")
+  modalSdxlEndpoint          String?  @map("modal_sdxl_endpoint")
+
+  // TTS endpoints
+  modalF5ttsEndpoint         String?  @map("modal_f5tts_endpoint")
+  modalChatterboxEndpoint    String?  @map("modal_chatterbox_endpoint")
+
+  // Video generation endpoints
+  modalVideoEndpoint         String?  @map("modal_video_endpoint")
+  modalMochiEndpoint         String?  @map("modal_mochi_endpoint")
+  modalCogVideoEndpoint      String?  @map("modal_cogvideo_endpoint")
+
+  // Lip sync and audio-visual endpoints
+  modalLipsyncEndpoint       String?  @map("modal_lipsync_endpoint")
+  modalWav2lipEndpoint       String?  @map("modal_wav2lip_endpoint")
+  modalSadTalkerEndpoint     String?  @map("modal_sadtalker_endpoint")
+
+  // Speech-to-text endpoints
+  modalWhisperEndpoint       String?  @map("modal_whisper_endpoint")
+  modalSttEndpoint           String?  @map("modal_stt_endpoint")
+
+  // Voice cloning endpoints
+  modalVoiceCloneEndpoint    String?  @map("modal_voice_clone_endpoint")
+  modalRvcEndpoint           String?  @map("modal_rvc_endpoint")
+
+  // Image/Video processing
+  modalUpscaleEndpoint       String?  @map("modal_upscale_endpoint")
+  modalInpaintEndpoint       String?  @map("modal_inpaint_endpoint")
+  modalSegmentEndpoint       String?  @map("modal_segment_endpoint")
+
+  // Music/Audio generation
+  modalMusicEndpoint         String?  @map("modal_music_endpoint")
+  modalAudioEndpoint         String?  @map("modal_audio_endpoint")
 
   createdAt              DateTime @default(now()) @map("created_at")
   updatedAt              DateTime @updatedAt @map("updated_at")
