@@ -59,6 +59,41 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * GET /api/gallery/stats
+ * Get gallery statistics
+ */
+router.get('/stats/overview', async (req, res) => {
+  try {
+    const prisma = req.app.get('prisma');
+
+    const [totalItems, totalImages, totalVideos, totalViews, totalLikes] = await Promise.all([
+      prisma.galleryItem.count({ where: { isPublic: true } }),
+      prisma.galleryItem.count({ where: { isPublic: true, mediaType: 'IMAGE' } }),
+      prisma.galleryItem.count({ where: { isPublic: true, mediaType: 'VIDEO' } }),
+      prisma.galleryItem.aggregate({
+        where: { isPublic: true },
+        _sum: { views: true }
+      }),
+      prisma.galleryItem.aggregate({
+        where: { isPublic: true },
+        _sum: { likes: true }
+      })
+    ]);
+
+    res.json({
+      totalItems,
+      totalImages,
+      totalVideos,
+      totalViews: totalViews._sum.views || 0,
+      totalLikes: totalLikes._sum.likes || 0
+    });
+  } catch (error) {
+    console.error('Gallery stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch gallery stats' });
+  }
+});
+
+/**
  * GET /api/gallery/:id
  * Get a single gallery item and increment view count
  */
@@ -186,41 +221,6 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Gallery delete error:', error);
     res.status(500).json({ error: 'Failed to delete gallery item' });
-  }
-});
-
-/**
- * GET /api/gallery/stats
- * Get gallery statistics
- */
-router.get('/stats/overview', async (req, res) => {
-  try {
-    const prisma = req.app.get('prisma');
-
-    const [totalItems, totalImages, totalVideos, totalViews, totalLikes] = await Promise.all([
-      prisma.galleryItem.count({ where: { isPublic: true } }),
-      prisma.galleryItem.count({ where: { isPublic: true, mediaType: 'IMAGE' } }),
-      prisma.galleryItem.count({ where: { isPublic: true, mediaType: 'VIDEO' } }),
-      prisma.galleryItem.aggregate({
-        where: { isPublic: true },
-        _sum: { views: true }
-      }),
-      prisma.galleryItem.aggregate({
-        where: { isPublic: true },
-        _sum: { likes: true }
-      })
-    ]);
-
-    res.json({
-      totalItems,
-      totalImages,
-      totalVideos,
-      totalViews: totalViews._sum.views || 0,
-      totalLikes: totalLikes._sum.likes || 0
-    });
-  } catch (error) {
-    console.error('Gallery stats error:', error);
-    res.status(500).json({ error: 'Failed to fetch gallery stats' });
   }
 });
 

@@ -67,7 +67,6 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/gallery" element={<Gallery />} />
 
       {/* Protected Routes */}
       <Route
@@ -88,6 +87,7 @@ function App() {
         <Route path="characters/new" element={<CharacterForm />} />
         <Route path="characters/:id" element={<CharacterForm />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="gallery" element={<Gallery />} />
 
         {/* Admin Routes */}
         <Route
