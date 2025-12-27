@@ -141,7 +141,7 @@ class VideoStitcher {
   }
 
   /**
-   * Create title card video clip
+   * Create title card video clip with silent audio
    */
   async createTitleCard(text, duration = 3) {
     const outputPath = path.join(this.tempDir, `title_${Date.now()}.mp4`);
@@ -150,10 +150,15 @@ class VideoStitcher {
       ffmpeg()
         .input(`color=c=black:s=1920x1080:d=${duration}`)
         .inputOptions(['-f lavfi'])
+        .input('anullsrc')
+        .inputOptions(['-f lavfi', `-t ${duration}`])
         .outputOptions([
-          `-vf drawtext=text='${text.replace(/'/g, "\\'")}':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc`,
+          `-filter_complex [0:v]drawtext=text='${text.replace(/'/g, "\\'")}':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`,
+          '-map [v]',
+          '-map 1:a',
           '-c:v libx264',
-          '-t', `${duration}`,
+          '-c:a aac',
+          '-shortest',
           '-pix_fmt yuv420p'
         ])
         .output(outputPath)
@@ -167,7 +172,7 @@ class VideoStitcher {
   }
 
   /**
-   * Create credits video clip
+   * Create credits video clip with silent audio
    */
   async createCredits(text, duration = 5) {
     const outputPath = path.join(this.tempDir, `credits_${Date.now()}.mp4`);
@@ -179,10 +184,15 @@ class VideoStitcher {
       ffmpeg()
         .input(`color=c=black:s=1920x1080:d=${duration}`)
         .inputOptions(['-f lavfi'])
+        .input('anullsrc')
+        .inputOptions(['-f lavfi', `-t ${duration}`])
         .outputOptions([
-          `-vf drawtext=text='${creditsText}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc`,
+          `-filter_complex [0:v]drawtext=text='${creditsText}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`,
+          '-map [v]',
+          '-map 1:a',
           '-c:v libx264',
-          '-t', `${duration}`,
+          '-c:a aac',
+          '-shortest',
           '-pix_fmt yuv420p'
         ])
         .output(outputPath)
