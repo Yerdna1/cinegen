@@ -7,7 +7,10 @@ import {
   SparklesIcon,
   PhotoIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  SpeakerWaveIcon,
+  PlayIcon,
+  StopIcon
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -21,11 +24,16 @@ export default function SceneCard({
   onMoveDown,
   onDelete,
   isFirst,
-  isLast
+  isLast,
+  voiceId,
+  voiceProvider
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioElement, setAudioElement] = useState(null);
   const [imageTasks, setImageTasks] = useState({ startTaskId: null, endTaskId: null });
   const [editData, setEditData] = useState({
     dialogue: scene.dialogue || '',
@@ -177,6 +185,65 @@ export default function SceneCard({
     };
 
     setTimeout(checkStatus, 3000); // First check after 3 seconds
+  };
+
+  const handleGenerateAudio = async () => {
+    if (!scene.dialogue) {
+      toast.error('Generate dialogue first before creating audio');
+      return;
+    }
+
+    if (!voiceId || !voiceProvider) {
+      toast.error('Please assign a voice to a character in the Voices step first');
+      return;
+    }
+
+    setIsGeneratingAudio(true);
+    try {
+      const response = await api.post(
+        `/generation/projects/${projectId}/scenes/${scene.id}/generate-audio`,
+        {
+          voiceId,
+          voiceProvider
+        }
+      );
+
+      if (response.data.audioUrl) {
+        onUpdate({
+          ...scene,
+          audioUrl: response.data.audioUrl
+        });
+        toast.success('Audio generated!');
+      } else if (response.data.taskId) {
+        toast.success('Audio generation started');
+        // Could add polling for async TTS here if needed
+      }
+    } catch (error) {
+      console.error('Generate audio error:', error);
+      toast.error(error.response?.data?.error || 'Failed to generate audio');
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const handlePlayAudio = () => {
+    if (!scene.audioUrl) return;
+
+    if (isPlayingAudio && audioElement) {
+      audioElement.pause();
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    const audio = new Audio(scene.audioUrl);
+    audio.onended = () => setIsPlayingAudio(false);
+    audio.onerror = () => {
+      toast.error('Failed to play audio');
+      setIsPlayingAudio(false);
+    };
+    audio.play();
+    setAudioElement(audio);
+    setIsPlayingAudio(true);
   };
 
   const handleSaveEdit = async () => {
@@ -359,6 +426,42 @@ export default function SceneCard({
               {isGeneratingImages ? 'Generating Images...' : 'Generate Images'}
             </button>
           )}
+
+          {/* Audio Section */}
+          <div className="pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Audio</label>
+                {scene.audioUrl && (
+                  <button
+                    onClick={handlePlayAudio}
+                    className="p-1 text-gray-600 hover:text-primary-600 rounded"
+                    title={isPlayingAudio ? 'Stop' : 'Play'}
+                  >
+                    {isPlayingAudio ? (
+                      <StopIcon className="h-4 w-4" />
+                    ) : (
+                      <PlayIcon className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={handleGenerateAudio}
+                disabled={isGeneratingAudio || !scene.dialogue}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                title={!scene.dialogue ? 'Generate dialogue first' : 'Generate audio from dialogue'}
+              >
+                <SpeakerWaveIcon className="h-3.5 w-3.5" />
+                {isGeneratingAudio ? 'Generating...' : 'Generate Audio'}
+              </button>
+            </div>
+            {scene.audioUrl ? (
+              <p className="text-xs text-green-600 mt-1">Audio ready</p>
+            ) : (
+              <p className="text-xs text-gray-400 mt-1">No audio generated</p>
+            )}
+          </div>
         </div>
       ) : (
         /* Edit Form */

@@ -5,24 +5,35 @@
  */
 
 const express = require('express');
+const path = require('path');
+const fs = require('fs').promises;
 const router = express.Router();
 const { getLLMProvider, getAvailableLLMProviders } = require('../services/llm-factory');
 const { getImageProvider, getAvailableImageProviders } = require('../services/image-factory');
+const { getAvailableTTSProviders, getAllVoices, generateSpeech } = require('../services/tts-factory');
+const elevenlabsService = require('../services/elevenlabs');
 
 /**
  * GET /api/generation/providers
- * Get available LLM and image providers
+ * Get available LLM, image, and TTS providers
  */
 router.get('/providers', async (req, res, next) => {
   try {
-    const [llmProviders, imageProviders] = await Promise.all([
+    const prisma = req.app.get('prisma');
+
+    // Get user's ElevenLabs API key for TTS availability check
+    const elevenlabsApiKey = await elevenlabsService.getUserApiKey(prisma, req.user.id);
+
+    const [llmProviders, imageProviders, ttsProviders] = await Promise.all([
       getAvailableLLMProviders(),
-      getAvailableImageProviders()
+      getAvailableImageProviders(),
+      getAvailableTTSProviders({ elevenlabsApiKey })
     ]);
 
     res.json({
       llm: llmProviders,
-      image: imageProviders
+      image: imageProviders,
+      tts: ttsProviders
     });
   } catch (error) {
     next(error);
@@ -493,6 +504,346 @@ router.post('/projects/:id/generate-all-content', async (req, res, next) => {
     });
   } catch (error) {
     console.error('Generate all content error:', error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/generation/voices
+ * Get all available voices from all TTS providers
+ */
+router.get('/voices', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+
+    // Get user's ElevenLabs API key
+    const elevenlabsApiKey = await elevenlabsService.getUserApiKey(prisma, req.user.id);
+
+    const voices = await getAllVoices({ elevenlabsApiKey });
+
+    res.json({ voices });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/generation/voices/:provider
+ * Get voices from a specific TTS provider
+ */
+router.get('/voices/:provider', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const { provider } = req.params;
+
+    let voices = [];
+
+    if (provider === 'elevenlabs') {
+      const apiKey = await elevenlabsService.getUserApiKey(prisma, req.user.id);
+      if (!apiKey) {
+        return res.status(400).json({ error: 'ElevenLabs API key not configured' });
+      }
+      voices = await elevenlabsService.getVoices(apiKey);
+    } else if (provider === 'modal-f5tts' || provider === 'modal-chatterbox') {
+      const modalTTSService = require('../services/modal-tts');
+      const model = provider === 'modal-f5tts' ? 'f5tts' : 'chatterbox';
+      voices = await modalTTSService.getVoices(model);
+    } else {
+      return res.status(400).json({ error: 'Unknown TTS provider' });
+    }
+
+    res.json({ voices, provider });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/generation/projects/:id/scenes/:sceneId/generate-audio
+ * Generate audio for a scene's dialogue
+ */
+router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const { voiceProvider, voiceId, options = {} } = req.body;
+
+    // Verify project ownership
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      include: {
+        projectCharacters: { include: { character: true } }
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const scene = await prisma.scene.findFirst({
+      where: { id: req.params.sceneId, projectId: req.params.id }
+    });
+
+    if (!scene) {
+      return res.status(404).json({ error: 'Scene not found' });
+    }
+
+    if (!scene.dialogue) {
+      return res.status(400).json({ error: 'Scene has no dialogue to synthesize' });
+    }
+
+    // Determine voice provider and voice ID
+    const provider = voiceProvider || project.voiceProvider || 'elevenlabs';
+    const voice = voiceId;
+
+    if (!voice) {
+      return res.status(400).json({ error: 'Voice ID is required' });
+    }
+
+    // Get API key for ElevenLabs if needed
+    let apiKey = null;
+    if (provider === 'elevenlabs') {
+      apiKey = await elevenlabsService.getUserApiKey(prisma, req.user.id);
+      if (!apiKey) {
+        return res.status(400).json({ error: 'ElevenLabs API key not configured' });
+      }
+    }
+
+    // Generate speech
+    const result = await generateSpeech(provider, voice, scene.dialogue, {
+      ...options,
+      apiKey
+    });
+
+    // If we got audio data, save it
+    if (result.audioBase64 || result.audioUrl) {
+      let audioUrl = result.audioUrl;
+
+      // If we have base64 audio, save it to a file
+      if (result.audioBase64) {
+        const uploadsDir = path.join(__dirname, '../../uploads/audio');
+        await fs.mkdir(uploadsDir, { recursive: true });
+
+        const filename = `scene-${scene.id}-${Date.now()}.mp3`;
+        const filepath = path.join(uploadsDir, filename);
+
+        await fs.writeFile(filepath, Buffer.from(result.audioBase64, 'base64'));
+        audioUrl = `/uploads/audio/${filename}`;
+      }
+
+      // Update scene with audio URL
+      await prisma.scene.update({
+        where: { id: req.params.sceneId },
+        data: { audioUrl }
+      });
+
+      res.json({
+        success: true,
+        audioUrl,
+        provider,
+        voiceId: voice
+      });
+    } else if (result.taskId) {
+      // Async generation - return task ID for polling
+      res.json({
+        success: true,
+        taskId: result.taskId,
+        status: 'pending',
+        provider,
+        voiceId: voice
+      });
+    } else {
+      throw new Error('No audio generated');
+    }
+  } catch (error) {
+    console.error('Audio generation error:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/generation/projects/:id/generate-all-audio
+ * Generate audio for all scenes in a project using assigned character voices
+ */
+router.post('/projects/:id/generate-all-audio', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+
+    // Verify project ownership
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      include: {
+        projectCharacters: { include: { character: true } },
+        scenes: { orderBy: { sequenceNumber: 'asc' } }
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.scenes.length === 0) {
+      return res.status(400).json({ error: 'No scenes to generate audio for' });
+    }
+
+    // Check if characters have voices assigned
+    const voiceMap = new Map();
+    for (const pc of project.projectCharacters) {
+      if (pc.voiceId && pc.voiceProvider) {
+        voiceMap.set(pc.character.name.toLowerCase(), {
+          voiceId: pc.voiceId,
+          voiceProvider: pc.voiceProvider
+        });
+      }
+    }
+
+    // Get ElevenLabs API key if needed
+    let elevenlabsApiKey = null;
+    const needsElevenlabs = project.projectCharacters.some(pc => pc.voiceProvider === 'elevenlabs');
+    if (needsElevenlabs) {
+      elevenlabsApiKey = await elevenlabsService.getUserApiKey(prisma, req.user.id);
+    }
+
+    // Default voice if no character match
+    const defaultVoice = project.projectCharacters[0] || null;
+    const defaultVoiceProvider = defaultVoice?.voiceProvider || project.voiceProvider || 'elevenlabs';
+    const defaultVoiceId = defaultVoice?.voiceId || null;
+
+    if (!defaultVoiceId) {
+      return res.status(400).json({
+        error: 'No voices assigned to characters. Please assign voices in the Voices step.'
+      });
+    }
+
+    const results = [];
+    const uploadsDir = path.join(__dirname, '../../uploads/audio');
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    // Generate audio for each scene
+    for (const scene of project.scenes) {
+      if (!scene.dialogue) {
+        results.push({
+          sceneId: scene.id,
+          sequenceNumber: scene.sequenceNumber,
+          success: false,
+          error: 'No dialogue'
+        });
+        continue;
+      }
+
+      try {
+        // Use default voice for now (could parse dialogue to detect speaker)
+        const voiceProvider = defaultVoiceProvider;
+        const voiceId = defaultVoiceId;
+
+        let apiKey = null;
+        if (voiceProvider === 'elevenlabs') {
+          apiKey = elevenlabsApiKey;
+          if (!apiKey) {
+            throw new Error('ElevenLabs API key not configured');
+          }
+        }
+
+        const result = await generateSpeech(voiceProvider, voiceId, scene.dialogue, { apiKey });
+
+        let audioUrl = result.audioUrl;
+
+        if (result.audioBase64) {
+          const filename = `scene-${scene.id}-${Date.now()}.mp3`;
+          const filepath = path.join(uploadsDir, filename);
+          await fs.writeFile(filepath, Buffer.from(result.audioBase64, 'base64'));
+          audioUrl = `/uploads/audio/${filename}`;
+        }
+
+        if (audioUrl) {
+          await prisma.scene.update({
+            where: { id: scene.id },
+            data: { audioUrl }
+          });
+        }
+
+        results.push({
+          sceneId: scene.id,
+          sequenceNumber: scene.sequenceNumber,
+          success: true,
+          audioUrl
+        });
+      } catch (error) {
+        console.error(`Failed to generate audio for scene ${scene.sequenceNumber}:`, error);
+        results.push({
+          sceneId: scene.id,
+          sequenceNumber: scene.sequenceNumber,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // Fetch updated scenes
+    const updatedScenes = await prisma.scene.findMany({
+      where: { projectId: req.params.id },
+      orderBy: { sequenceNumber: 'asc' }
+    });
+
+    const successCount = results.filter(r => r.success).length;
+
+    res.json({
+      success: true,
+      results,
+      scenes: updatedScenes,
+      message: `Generated audio for ${successCount}/${project.scenes.length} scenes`
+    });
+  } catch (error) {
+    console.error('Generate all audio error:', error);
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/generation/projects/:id/characters/:characterId/voice
+ * Assign a voice to a character
+ */
+router.put('/projects/:id/characters/:characterId/voice', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const { voiceId, voiceProvider, voiceName } = req.body;
+
+    // Verify project ownership
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Find the project character
+    const projectCharacter = await prisma.projectCharacter.findFirst({
+      where: {
+        projectId: req.params.id,
+        characterId: req.params.characterId
+      }
+    });
+
+    if (!projectCharacter) {
+      return res.status(404).json({ error: 'Character not found in project' });
+    }
+
+    // Update the voice assignment
+    const updated = await prisma.projectCharacter.update({
+      where: { id: projectCharacter.id },
+      data: {
+        voiceId,
+        voiceProvider,
+        voiceName
+      },
+      include: { character: true }
+    });
+
+    res.json({
+      success: true,
+      projectCharacter: updated
+    });
+  } catch (error) {
     next(error);
   }
 });
