@@ -19,6 +19,7 @@ export default function CharacterForm() {
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const hasUnsavedChangesRef = useRef(false);
+  const isSubmittingRef = useRef(false); // Ref for synchronous submission tracking
 
   // Check if form has unsaved changes
   const hasUnsavedChanges = useCallback(() => {
@@ -159,6 +160,10 @@ export default function CharacterForm() {
     e.preventDefault();
     if (!validate()) return;
 
+    // Prevent double submission using synchronous ref check
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     setLoading(true);
     try {
       let characterId = id;
@@ -184,6 +189,7 @@ export default function CharacterForm() {
       toast.error(error.response?.data?.error || 'Failed to save character');
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false; // Reset ref after submission completes
     }
   };
 

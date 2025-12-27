@@ -100,6 +100,12 @@ export default function Login() {
             </Link>
           </div>
 
+          {errors.submit && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{errors.submit}</p>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
