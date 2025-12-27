@@ -175,6 +175,7 @@ router.get('/preferences', async (req, res, next) => {
         defaultVoiceProvider: preferences.defaultVoiceProvider,
         // Default models
         defaultVideoModel: preferences.defaultVideoModel,
+        defaultVideoMode: preferences.defaultVideoMode,
         defaultImageModel: preferences.defaultImageModel,
         // Modal.com endpoints
         modalChatterboxEndpoint: preferences.modalChatterboxEndpoint,
@@ -200,6 +201,7 @@ router.put('/preferences', async (req, res, next) => {
       defaultVideoProvider,
       defaultVoiceProvider,
       defaultVideoModel,
+      defaultVideoMode,
       defaultImageModel,
       modalChatterboxEndpoint,
       modalCoquiTtsEndpoint,
@@ -235,6 +237,7 @@ router.put('/preferences', async (req, res, next) => {
     if (defaultVideoProvider !== undefined) updateData.defaultVideoProvider = defaultVideoProvider;
     if (defaultVoiceProvider !== undefined) updateData.defaultVoiceProvider = defaultVoiceProvider;
     if (defaultVideoModel !== undefined) updateData.defaultVideoModel = defaultVideoModel;
+    if (defaultVideoMode !== undefined) updateData.defaultVideoMode = defaultVideoMode;
     if (defaultImageModel !== undefined) updateData.defaultImageModel = defaultImageModel;
     if (modalChatterboxEndpoint !== undefined) updateData.modalChatterboxEndpoint = modalChatterboxEndpoint;
     if (modalCoquiTtsEndpoint !== undefined) updateData.modalCoquiTtsEndpoint = modalCoquiTtsEndpoint;
@@ -260,6 +263,7 @@ router.put('/preferences', async (req, res, next) => {
         defaultVideoProvider: preferences.defaultVideoProvider,
         defaultVoiceProvider: preferences.defaultVoiceProvider,
         defaultVideoModel: preferences.defaultVideoModel,
+        defaultVideoMode: preferences.defaultVideoMode,
         defaultImageModel: preferences.defaultImageModel,
         modalChatterboxEndpoint: preferences.modalChatterboxEndpoint,
         modalCoquiTtsEndpoint: preferences.modalCoquiTtsEndpoint,

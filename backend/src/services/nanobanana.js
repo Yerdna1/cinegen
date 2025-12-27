@@ -28,7 +28,7 @@ class NanoBananaService {
   constructor() {
     this.defaultApiKey = process.env.NANOBANANA_API_KEY;
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
-    this.model = 'models/gemini-3-pro-image-preview';
+    this.defaultModel = 'gemini-3-pro-image-preview'; // Default model
   }
 
   /**
@@ -63,7 +63,8 @@ class NanoBananaService {
     const {
       aspectRatio = '16:9',
       style = 'cinematic',
-      apiKey = null
+      apiKey = null,
+      model = null // gemini-3-pro-image-preview, gemini-2.0-flash-exp, imagen-3.0-generate-002
     } = options;
 
     const key = apiKey || this.defaultApiKey;
@@ -71,10 +72,13 @@ class NanoBananaService {
       throw new Error('Google API key not configured. Please add your API key in Settings.');
     }
 
+    // Use provided model or default
+    const modelName = model || this.defaultModel;
+
     // Enhance prompt with style
     const enhancedPrompt = `${style} style image: ${prompt}. High quality, detailed, professional.`;
 
-    const url = `${this.baseUrl}/${this.model}:generateContent?key=${key}`;
+    const url = `${this.baseUrl}/models/${modelName}:generateContent?key=${key}`;
 
     const body = {
       contents: [{
@@ -87,7 +91,7 @@ class NanoBananaService {
       }
     };
 
-    console.log('[Gemini Image] Calling API:', { model: this.model, promptLength: enhancedPrompt.length });
+    console.log('[Gemini Image] Calling API:', { model: modelName, promptLength: enhancedPrompt.length });
 
     const response = await fetch(url, {
       method: 'POST',

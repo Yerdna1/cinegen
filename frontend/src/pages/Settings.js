@@ -26,7 +26,8 @@ export default function Settings() {
     defaultImageProvider: 'kling',
     defaultVideoProvider: 'piapi',
     defaultVoiceProvider: 'elevenlabs',
-    defaultVideoModel: 'kling-v2-master',
+    defaultVideoModel: '2.5',
+    defaultVideoMode: 'std',
     defaultImageModel: 'kling-v2',
     modalChatterboxEndpoint: '',
     modalCoquiTtsEndpoint: '',
@@ -78,33 +79,43 @@ export default function Settings() {
     { id: 'modal-coqui', name: 'Coqui TTS', description: t('settings.voiceProviders.coqui') }
   ];
 
-  // Video model options for Kling
+  // Video model options - maps to API model_name or version parameter
   const videoModelOptions = {
     kling: [
-      { id: 'kling-v2-master', name: 'Kling 2.1 Master', description: 'Highest quality, slower' },
-      { id: 'kling-v2', name: 'Kling 2.0', description: 'Balanced quality and speed' },
-      { id: 'kling-v1-6', name: 'Kling 1.6', description: 'Faster, good quality' },
-      { id: 'kling-v1-5', name: 'Kling 1.5', description: 'Fast, standard quality' }
+      { id: 'kling-v2-6', name: 'Kling 2.6', description: 'Latest model, best quality' },
+      { id: 'kling-v2-5-turbo', name: 'Kling 2.5 Turbo', description: 'Fast, high quality' },
+      { id: 'kling-v2-master', name: 'Kling 2.1 Master', description: 'Professional quality' },
+      { id: 'kling-v1', name: 'Kling 1.0', description: 'Original model' }
     ],
     piapi: [
-      { id: 'kling-v2-master', name: 'Kling 2.1 Master', description: 'Via PiAPI - highest quality' },
-      { id: 'kling-v2', name: 'Kling 2.0', description: 'Via PiAPI - balanced' },
-      { id: 'kling-v1-6', name: 'Kling 1.6', description: 'Via PiAPI - faster' }
+      { id: '2.6', name: 'Kling 2.6', description: 'Latest via PiAPI' },
+      { id: '2.5', name: 'Kling 2.5', description: 'Recommended - fast & quality' },
+      { id: '2.1', name: 'Kling 2.1', description: 'Professional mode' },
+      { id: '1.6', name: 'Kling 1.6', description: 'Faster, good quality' },
+      { id: '1.5', name: 'Kling 1.5', description: 'Original, fastest' }
     ],
     modal: [
       { id: 'default', name: 'Default', description: 'Self-hosted model' }
     ]
   };
 
-  // Image model options for Kling
+  // Video mode options for PiAPI (std = cheaper, pro = better quality)
+  const videoModeOptions = [
+    { id: 'std', name: 'Standard', description: 'Faster, lower cost ($0.26)' },
+    { id: 'pro', name: 'Professional', description: 'Higher quality ($0.46)' }
+  ];
+
+  // Image model options
   const imageModelOptions = {
     kling: [
       { id: 'kling-v2', name: 'Kling 2.0', description: 'Latest image model' },
-      { id: 'kling-v1-5', name: 'Kling 1.5', description: 'Previous version' }
+      { id: 'kling-v1-5', name: 'Kling 1.5', description: 'Stable, fast' },
+      { id: 'kling-v1', name: 'Kling 1.0', description: 'Original' }
     ],
     nanobanana: [
-      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', description: 'Fast image generation' },
-      { id: 'imagen-3.0-generate-002', name: 'Imagen 3.0', description: 'High quality images' }
+      { id: 'gemini-3-pro-image-preview', name: 'Gemini 3.0 Pro', description: 'Latest Gemini model' },
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', description: 'Fast generation' },
+      { id: 'imagen-3.0-generate-002', name: 'Imagen 3.0', description: 'High quality photos' }
     ],
     modal: [
       { id: 'flux-schnell', name: 'Flux Schnell', description: 'Fast generation' },
@@ -390,22 +401,49 @@ export default function Settings() {
                   }}
                   onModelChange={(v) => updatePreference('defaultImageModel', v)}
                 />
-                <ProviderWithModelSelector
-                  label={t('settings.videoProvider')}
-                  providerOptions={videoProviderOptions}
-                  modelOptionsMap={videoModelOptions}
-                  providerValue={preferences.defaultVideoProvider}
-                  modelValue={preferences.defaultVideoModel}
-                  onProviderChange={(v) => {
-                    updatePreference('defaultVideoProvider', v);
-                    // Set default model for new provider
-                    const models = videoModelOptions[v];
-                    if (models && models.length > 0) {
-                      updatePreference('defaultVideoModel', models[0].id);
-                    }
-                  }}
-                  onModelChange={(v) => updatePreference('defaultVideoModel', v)}
-                />
+                <div>
+                  <ProviderWithModelSelector
+                    label={t('settings.videoProvider')}
+                    providerOptions={videoProviderOptions}
+                    modelOptionsMap={videoModelOptions}
+                    providerValue={preferences.defaultVideoProvider}
+                    modelValue={preferences.defaultVideoModel}
+                    onProviderChange={(v) => {
+                      updatePreference('defaultVideoProvider', v);
+                      // Set default model for new provider
+                      const models = videoModelOptions[v];
+                      if (models && models.length > 0) {
+                        updatePreference('defaultVideoModel', models[0].id);
+                      }
+                    }}
+                    onModelChange={(v) => updatePreference('defaultVideoModel', v)}
+                  />
+                  {/* Video mode selector for PiAPI */}
+                  {preferences.defaultVideoProvider === 'piapi' && (
+                    <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+                      <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                        Video Quality Mode
+                      </label>
+                      <div className="flex gap-2">
+                        {videoModeOptions.map(mode => (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            onClick={() => updatePreference('defaultVideoMode', mode.id)}
+                            className="flex-1 p-2.5 rounded-lg text-center transition-all duration-200"
+                            style={{
+                              backgroundColor: preferences.defaultVideoMode === mode.id ? 'var(--color-accent-subtle)' : 'var(--color-bg-surface)',
+                              border: preferences.defaultVideoMode === mode.id ? '2px solid var(--color-accent)' : '2px solid transparent'
+                            }}
+                          >
+                            <span className="font-medium text-sm block" style={{ color: 'var(--color-text-primary)' }}>{mode.name}</span>
+                            <span className="text-xs block" style={{ color: 'var(--color-text-muted)' }}>{mode.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <ProviderSelector
                   label={t('settings.voiceProvider')}
                   options={voiceProviderOptions}

@@ -153,11 +153,12 @@ class KlingService {
       duration = '5', // 5 or 10 seconds
       cfgScale = 0.5,
       mode = 'std', // std or pro
-      aspectRatio = '16:9'
+      aspectRatio = '16:9',
+      modelName = 'kling-v2-5-turbo' // kling-v2-6, kling-v2-5-turbo, kling-v2-master, kling-v1
     } = options;
 
     const body = {
-      model_name: 'kling-v2-5-turbo',
+      model_name: modelName,
       image: imageUrl,
       prompt,
       negative_prompt: negativePrompt,
@@ -182,11 +183,12 @@ class KlingService {
       duration = '5',
       cfgScale = 0.5,
       mode = 'std',
-      aspectRatio = '16:9'
+      aspectRatio = '16:9',
+      modelName = 'kling-v2-5-turbo' // kling-v2-6, kling-v2-5-turbo, kling-v2-master, kling-v1
     } = options;
 
     const body = {
-      model_name: 'kling-v2-5-turbo',
+      model_name: modelName,
       prompt,
       negative_prompt: negativePrompt,
       cfg_scale: cfgScale,
@@ -220,11 +222,12 @@ class KlingService {
       imageCount = 1,
       width = 1024,
       height = 576,
-      referenceImages = [] // For character consistency
+      referenceImages = [], // For character consistency
+      modelName = 'kling-v1' // kling-v2, kling-v1-5, kling-v1
     } = options;
 
     const body = {
-      model_name: 'kling-v1',
+      model_name: modelName,
       prompt,
       negative_prompt: negativePrompt,
       n: imageCount,

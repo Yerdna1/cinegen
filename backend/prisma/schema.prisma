@@ -41,7 +41,8 @@ model UserPreferences {
   defaultVoiceProvider   String?  @default("elevenlabs") @map("default_voice_provider")
 
   // Default models within providers
-  defaultVideoModel      String?  @default("kling-v2-master") @map("default_video_model")
+  defaultVideoModel      String?  @default("2.5") @map("default_video_model")
+  defaultVideoMode       String?  @default("std") @map("default_video_mode")
   defaultImageModel      String?  @default("kling-v2") @map("default_image_model")
 
   // User limits

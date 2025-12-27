@@ -206,6 +206,13 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
     });
     const imageService = getImageProvider(providerName);
 
+    // Get user preferences for model selection
+    let userPrefs = await prisma.userPreferences.findUnique({
+      where: { userId: req.user.id }
+    });
+    const selectedImageModel = userPrefs?.defaultImageModel || null;
+    console.log('[Image Generation] Using model:', selectedImageModel);
+
     // Get endpoint/API key for the image provider
     let imageEndpoint = null;
     let imageApiKey = null;
@@ -261,12 +268,14 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
             style: 'cinematic'
           });
         } else {
-          // Other providers (kling, nanobanana) - pass API key in options
+          // Other providers (kling, nanobanana) - pass API key and model in options
           startImageResult = await imageService.generateImage(scene.startImagePrompt, {
             aspectRatio: '16:9',
             referenceImages,
             style: 'cinematic',
-            apiKey: imageApiKey
+            apiKey: imageApiKey,
+            model: selectedImageModel, // For nanobanana (Gemini)
+            modelName: selectedImageModel // For kling
           });
         }
         tasks.startImage = startImageResult.data?.task_id;
@@ -314,12 +323,14 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
             style: 'cinematic'
           });
         } else {
-          // Other providers (kling, nanobanana) - pass API key in options
+          // Other providers (kling, nanobanana) - pass API key and model in options
           endImageResult = await imageService.generateImage(scene.endImagePrompt, {
             aspectRatio: '16:9',
             referenceImages,
             style: 'cinematic',
-            apiKey: imageApiKey
+            apiKey: imageApiKey,
+            model: selectedImageModel, // For nanobanana (Gemini)
+            modelName: selectedImageModel // For kling
           });
         }
         tasks.endImage = endImageResult.data?.task_id;
@@ -1194,8 +1205,21 @@ router.post('/projects/:id/scenes/:sceneId/generate-video', async (req, res, nex
   try {
     const prisma = req.app.get('prisma');
     const broadcastProgress = req.app.get('broadcastProgress');
+
+    // Get user preferences for video model and mode
+    const userPrefs = await prisma.userPreferences.findUnique({
+      where: { userId: req.user.id }
+    });
+
     // PiAPI requires 'pro' mode for first/last frame (image_tail_url) feature
-    const { duration = 5, mode = 'pro' } = req.body;
+    // Use user preferences or request body or defaults
+    const {
+      duration = 5,
+      mode = userPrefs?.defaultVideoMode || 'pro',
+      version = userPrefs?.defaultVideoModel || '2.5'
+    } = req.body;
+
+    console.log('[Video Generation] Using settings:', { version, mode, duration });
 
     // Verify project ownership
     const project = await prisma.project.findFirst({
@@ -1280,7 +1304,7 @@ router.post('/projects/:id/scenes/:sceneId/generate-video', async (req, res, nex
       startImageUrl,
       endImageUrl,
       videoPrompt,
-      { duration, mode, aspectRatio: '16:9' }
+      { duration, mode, version, aspectRatio: '16:9' }
     );
 
     console.log('[Video Generation] PiAPI Response:', videoResult);
