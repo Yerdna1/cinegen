@@ -99,8 +99,16 @@ router.post('/projects/:id/scenes/:sceneId/generate-content', async (req, res, n
       actions: scene.actions
     };
 
+    // Get user's API key for the LLM provider
+    const apiKey = await llmService.getUserApiKey(prisma, req.user.id);
+    if (!apiKey) {
+      return res.status(400).json({
+        error: `Missing API key for ${providerName}. Please add your API key in Settings.`
+      });
+    }
+
     // Generate content
-    const generatedContent = await llmService.generateSceneContent(sceneContext, projectContext);
+    const generatedContent = await llmService.generateSceneContent(apiKey, sceneContext, projectContext);
 
     // Update scene with generated content
     const updatedScene = await prisma.scene.update({

@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { FilmIcon, UsersIcon, PlusIcon } from '@heroicons/react/24/outline';
+
+// Clear wizard state for new projects
+const clearNewWizardState = () => {
+  try {
+    localStorage.removeItem('cinegen_wizard_new');
+  } catch (e) {
+    console.error('Failed to clear wizard state:', e);
+  }
+};
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ projects: 0, characters: 0 });
@@ -54,6 +63,7 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <Link
           to="/projects/new"
+          onClick={clearNewWizardState}
           className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
           <PlusIcon className="w-5 h-5 mr-2" />

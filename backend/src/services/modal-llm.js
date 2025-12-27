@@ -3,6 +3,9 @@
  *
  * Uses Modal.com hosted LLM models (e.g., Qwen) for scene content generation.
  * The endpoint should be a Modal.com deployed function URL.
+ *
+ * Note: Modal doesn't have a dedicated LLM endpoint in the current deployment.
+ * This service is a placeholder for future Modal-hosted LLM models.
  */
 
 class ModalLLMService {
@@ -12,23 +15,48 @@ class ModalLLMService {
   }
 
   /**
-   * Make authenticated request to Modal LLM endpoint
+   * Get user's Modal LLM endpoint from preferences
+   * Modal doesn't require API keys - endpoints are public or use Modal's auth
+   * @param {object} prisma - Prisma client
+   * @param {string} userId - User ID
+   * @returns {string|null} The endpoint URL or null if not configured
    */
-  async request(body) {
-    if (!this.endpoint) {
-      throw new Error('Modal LLM endpoint not configured');
+  async getUserApiKey(prisma, userId) {
+    // Modal LLM endpoint is not currently deployed
+    // Return the environment variable endpoint or null
+    const preferences = await prisma.userPreferences.findUnique({
+      where: { userId }
+    });
+
+    // For now, Modal doesn't have a dedicated LLM endpoint
+    // Return a placeholder that indicates Modal LLM is not available
+    return this.endpoint || null;
+  }
+
+  /**
+   * Make authenticated request to Modal LLM endpoint
+   * @param {string} endpoint - Optional endpoint override
+   */
+  async request(body, endpoint = null) {
+    const targetEndpoint = endpoint || this.endpoint;
+    if (!targetEndpoint) {
+      throw new Error('Modal LLM endpoint not configured. Please use Anthropic for now.');
     }
 
     const options = {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
     };
 
-    const response = await fetch(this.endpoint, options);
+    // Add auth if API key exists
+    if (this.apiKey) {
+      options.headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+
+    const response = await fetch(targetEndpoint, options);
     const data = await response.json();
 
     if (!response.ok) {
@@ -41,10 +69,11 @@ class ModalLLMService {
   /**
    * Generate scene content (dialogue + image prompts) for a single scene
    * Compatible interface with AnthropicService
+   * @param {string} apiKeyOrEndpoint - API key or endpoint URL (for Modal, this is the endpoint)
    * @param {object} sceneContext - Current scene details
    * @param {object} projectContext - Project-level context
    */
-  async generateSceneContent(sceneContext, projectContext) {
+  async generateSceneContent(apiKeyOrEndpoint, sceneContext, projectContext) {
     const systemPrompt = `You are a professional cinematic scene writer and visual storyteller. Your task is to generate dialogue and detailed image prompts for movie scenes.
 
 For each scene, you must generate:
@@ -106,7 +135,7 @@ Generate the scene content now. Respond ONLY with valid JSON.`;
       ],
       max_tokens: 2000,
       temperature: 0.7
-    });
+    }, apiKeyOrEndpoint);
 
     // Handle different response formats from Modal
     const responseText = result.choices?.[0]?.message?.content

@@ -5,22 +5,68 @@
  * API Documentation: https://docs.anthropic.com/en/api
  */
 
+const crypto = require('crypto');
+
+// Decryption helper for user API keys
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const ALGORITHM = 'aes-256-gcm';
+
+function decrypt(encryptedData) {
+  const parts = encryptedData.split(':');
+  const iv = Buffer.from(parts[0], 'hex');
+  const authTag = Buffer.from(parts[1], 'hex');
+  const encrypted = parts[2];
+  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
+
 class AnthropicService {
   constructor() {
-    this.apiKey = process.env.ANTHROPIC_API_KEY;
     this.baseUrl = 'https://api.anthropic.com';
     this.model = 'claude-sonnet-4-20250514';
   }
 
   /**
-   * Make authenticated request to Anthropic API
+   * Get user's decrypted API key from database
+   * Falls back to environment variable if not found
+   * @param {object} prisma - Prisma client
+   * @param {string} userId - User ID
    */
-  async request(endpoint, method = 'POST', body = null) {
+  async getUserApiKey(prisma, userId) {
+    // Try to get from database first
+    const apiKey = await prisma.apiKey.findFirst({
+      where: {
+        userId,
+        provider: 'anthropic'
+      }
+    });
+
+    if (apiKey) {
+      return decrypt(apiKey.encryptedKey);
+    }
+
+    // Fall back to environment variable
+    return process.env.ANTHROPIC_API_KEY || null;
+  }
+
+  /**
+   * Make authenticated request to Anthropic API
+   * @param {string} apiKey - API key to use
+   */
+  async request(apiKey, endpoint, method = 'POST', body = null) {
+    if (!apiKey) {
+      throw new Error('Anthropic API key is required');
+    }
+
     const options = {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       }
     };
@@ -41,10 +87,11 @@ class AnthropicService {
 
   /**
    * Generate scene content (dialogue + image prompts) for a single scene
+   * @param {string} apiKey - API key to use
    * @param {object} sceneContext - Current scene details
    * @param {object} projectContext - Project-level context (genre, setting, characters, etc.)
    */
-  async generateSceneContent(sceneContext, projectContext) {
+  async generateSceneContent(apiKey, sceneContext, projectContext) {
     const systemPrompt = `You are a professional cinematic scene writer and visual storyteller. Your task is to generate dialogue and detailed image prompts for movie scenes.
 
 For each scene, you must generate:
@@ -97,7 +144,7 @@ CURRENT SCENE CONTEXT:
 
 Generate the scene content now. Respond ONLY with valid JSON.`;
 
-    const result = await this.request('/v1/messages', 'POST', {
+    const result = await this.request(apiKey, '/v1/messages', 'POST', {
       model: this.model,
       max_tokens: 2000,
       system: systemPrompt,
@@ -140,10 +187,11 @@ Generate the scene content now. Respond ONLY with valid JSON.`;
 
   /**
    * Generate a style guide for the entire project
+   * @param {string} apiKey - API key to use
    * @param {object} project - Project details
    * @param {array} characters - Character list with descriptions
    */
-  async generateStyleGuide(project, characters) {
+  async generateStyleGuide(apiKey, project, characters) {
     const systemPrompt = `You are a visual style consultant for film production. Generate a concise style guide that ensures visual consistency across all scenes.`;
 
     const userPrompt = `Create a visual style guide for this project:
@@ -164,7 +212,7 @@ Generate a JSON style guide with:
   "characterAppearance": "Key visual traits to maintain for each character"
 }`;
 
-    const result = await this.request('/v1/messages', 'POST', {
+    const result = await this.request(apiKey, '/v1/messages', 'POST', {
       model: this.model,
       max_tokens: 1000,
       system: systemPrompt,
@@ -185,10 +233,12 @@ Generate a JSON style guide with:
 
   /**
    * Test API connection
+   * @param {string} apiKey - API key to test (optional, falls back to env var)
    */
-  async testConnection() {
+  async testConnection(apiKey) {
+    const keyToTest = apiKey || process.env.ANTHROPIC_API_KEY;
     try {
-      if (!this.apiKey) {
+      if (!keyToTest) {
         return {
           success: false,
           message: 'Missing Anthropic API key',
@@ -197,7 +247,7 @@ Generate a JSON style guide with:
       }
 
       // Make a simple test request
-      await this.request('/v1/messages', 'POST', {
+      await this.request(keyToTest, '/v1/messages', 'POST', {
         model: this.model,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Say "ok"' }]
@@ -212,7 +262,7 @@ Generate a JSON style guide with:
       return {
         success: false,
         message: error.message,
-        hasApiKey: !!this.apiKey
+        hasApiKey: !!keyToTest
       };
     }
   }

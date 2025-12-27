@@ -5,6 +5,15 @@ import toast from 'react-hot-toast';
 import { PlusIcon, TrashIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { ConfirmModal } from '../components/Modal';
 
+// Clear wizard state for new projects
+const clearNewWizardState = () => {
+  try {
+    localStorage.removeItem('cinegen_wizard_new');
+  } catch (e) {
+    console.error('Failed to clear wizard state:', e);
+  }
+};
+
 export default function Projects() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects] = useState([]);
@@ -85,6 +94,7 @@ export default function Projects() {
         <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
         <Link
           to="/projects/new"
+          onClick={clearNewWizardState}
           className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
           <PlusIcon className="w-5 h-5 mr-2" />
