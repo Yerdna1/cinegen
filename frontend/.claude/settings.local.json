@@ -5,7 +5,11 @@
       "Bash(curl:*)",
       "Bash(lsof:*)",
       "Bash(npx prisma db push:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(npx prisma db seed:*)",
+      "Bash(node create-user.js:*)",
+      "Bash(npx prisma db execute:*)",
+      "Bash(node fix-user.js:*)"
     ]
   }
 }
