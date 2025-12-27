@@ -151,3 +151,24 @@ model VerificationToken {
 
   @@map("verification_tokens")
 }
+
+model GalleryItem {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  mediaType   String   @map("media_type") // IMAGE, VIDEO
+  mediaUrl    String   @map("media_url")
+  thumbnailUrl String? @map("thumbnail_url")
+  prompt      String
+  provider    String   @default("kling") // kling, hailuo, etc.
+  isPublic    Boolean  @default(true) @map("is_public")
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  taskId      String?  @map("task_id") // External task ID from API
+  metadata    String?  // JSON string for extra info (duration, resolution, etc.)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([isPublic, createdAt])
+  @@index([userId])
+  @@map("gallery_items")
+}

@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { PlusIcon, TrashIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { ConfirmModal } from '../components/Modal';
 
 export default function Projects() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  // Initialize state from URL query params
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, project: null });
+
+  // Update URL when filters change
+  useEffect(() => {
+    const newParams = new URLSearchParams();
+    if (search) newParams.set('search', search);
+    if (statusFilter) newParams.set('status', statusFilter);
+    setSearchParams(newParams, { replace: true });
+  }, [search, statusFilter, setSearchParams]);
 
   useEffect(() => {
     fetchProjects();
@@ -29,12 +41,21 @@ export default function Projects() {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Delete project "${name}"?`)) return;
+  const openDeleteModal = (project) => {
+    setDeleteModal({ isOpen: true, project });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, project: null });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteModal.project) return;
 
     try {
-      await api.delete(`/projects/${id}`);
+      await api.delete(`/projects/${deleteModal.project.id}`);
       toast.success('Project deleted');
+      closeDeleteModal();
       fetchProjects();
     } catch (error) {
       toast.error('Failed to delete project');
@@ -129,7 +150,7 @@ export default function Projects() {
                     <Link to={`/projects/${project.id}/edit`} className="text-gray-600 hover:text-gray-800">
                       <PencilIcon className="w-5 h-5 inline" />
                     </Link>
-                    <button onClick={() => handleDelete(project.id, project.name)} className="text-red-600 hover:text-red-800">
+                    <button onClick={() => openDeleteModal(project)} className="text-red-600 hover:text-red-800">
                       <TrashIcon className="w-5 h-5 inline" />
                     </button>
                   </td>
@@ -139,6 +160,16 @@ export default function Projects() {
           </table>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDelete}
+        title="Delete Project"
+        message={`Are you sure you want to delete "${deleteModal.project?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        confirmColor="red"
+      />
     </div>
   );
 }

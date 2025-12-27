@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
 // Layout
@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
+import Gallery from './pages/Gallery';
 
 // Protected Pages
 import Dashboard from './pages/Dashboard';
@@ -34,6 +35,7 @@ import NotFound from './pages/NotFound';
 // Protected Route Component
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -44,7 +46,8 @@ function ProtectedRoute({ children, adminOnly = false }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // Pass the current location as state so login can redirect back
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (adminOnly && user.role !== 'ADMIN') {
@@ -57,23 +60,23 @@ function ProtectedRoute({ children, adminOnly = false }) {
 function App() {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Public Routes - Dashboard is the landing page (redirects to login if not authenticated) */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/gallery" element={<Gallery />} />
 
       {/* Protected Routes */}
       <Route
-        path="/"
         element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="projects" element={<Projects />} />
         <Route path="projects/new" element={<ProjectWizard />} />

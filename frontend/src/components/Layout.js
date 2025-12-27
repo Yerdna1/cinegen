@@ -9,13 +9,15 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Projects', href: '/projects', icon: FilmIcon },
   { name: 'Characters', href: '/characters', icon: UsersIcon },
+  { name: 'Gallery', href: '/gallery', icon: PhotoIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon }
 ];
 

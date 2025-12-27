@@ -15,7 +15,8 @@ router.get('/', async (req, res, next) => {
     }
 
     if (search) {
-      where.name = { contains: search, mode: 'insensitive' };
+      // SQLite doesn't support mode: 'insensitive', so we use contains only
+      where.name = { contains: search };
     }
 
     const projects = await prisma.project.findMany({

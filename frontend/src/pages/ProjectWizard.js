@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-
-const genres = ['Action', 'Drama', 'Comedy', 'Horror', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary'];
 
 const steps = [
   { id: 1, name: 'Duration', description: 'Set video length' },
@@ -16,6 +14,44 @@ const steps = [
   { id: 8, name: 'Generate', description: 'Start generation' }
 ];
 
+// Helper functions for localStorage wizard state persistence
+const getWizardStorageKey = (projectId) => `cinegen_wizard_${projectId || 'new'}`;
+
+const saveWizardState = (projectId, state) => {
+  try {
+    localStorage.setItem(getWizardStorageKey(projectId), JSON.stringify({
+      ...state,
+      savedAt: Date.now()
+    }));
+  } catch (e) {
+    console.error('Failed to save wizard state:', e);
+  }
+};
+
+const loadWizardState = (projectId) => {
+  try {
+    const saved = localStorage.getItem(getWizardStorageKey(projectId));
+    if (saved) {
+      const state = JSON.parse(saved);
+      // Check if saved state is less than 24 hours old
+      if (state.savedAt && Date.now() - state.savedAt < 24 * 60 * 60 * 1000) {
+        return state;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load wizard state:', e);
+  }
+  return null;
+};
+
+const clearWizardState = (projectId) => {
+  try {
+    localStorage.removeItem(getWizardStorageKey(projectId));
+  } catch (e) {
+    console.error('Failed to clear wizard state:', e);
+  }
+};
+
 export default function ProjectWizard() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,7 +60,9 @@ export default function ProjectWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [projectId, setProjectId] = useState(id);
   const [loading, setLoading] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [characters, setCharacters] = useState([]);
+  const [genres, setGenres] = useState([]);
   const [voices, setVoices] = useState([]);
   const [scenes, setScenes] = useState([]);
 
@@ -40,10 +78,64 @@ export default function ProjectWizard() {
 
   useEffect(() => {
     fetchCharacters();
+    fetchGenres();
     if (isEditing) {
       fetchProject();
+    } else {
+      // For new projects, try to restore from localStorage
+      const savedState = loadWizardState(null);
+      if (savedState) {
+        // If this "new" project was already created, redirect to edit it
+        if (savedState.projectId) {
+          // Load state from project-specific key and navigate
+          const projectState = loadWizardState(savedState.projectId);
+          if (projectState) {
+            setProjectId(savedState.projectId);
+            if (projectState.currentStep) setCurrentStep(projectState.currentStep);
+            if (projectState.formData) setFormData(projectState.formData);
+            if (projectState.scenes) setScenes(projectState.scenes);
+          }
+        } else {
+          if (savedState.currentStep) setCurrentStep(savedState.currentStep);
+          if (savedState.formData) setFormData(savedState.formData);
+          if (savedState.scenes) setScenes(savedState.scenes);
+        }
+      }
+      setInitialLoadDone(true);
     }
   }, [id]);
+
+  // Save wizard state to localStorage whenever key state changes
+  useEffect(() => {
+    if (!initialLoadDone) return;
+
+    saveWizardState(projectId, {
+      currentStep,
+      formData,
+      scenes,
+      projectId
+    });
+  }, [currentStep, formData, scenes, projectId, initialLoadDone]);
+
+  const fetchGenres = async () => {
+    try {
+      const response = await api.get('/genres');
+      setGenres(response.data.genres);
+    } catch (error) {
+      console.error('Failed to fetch genres');
+      // Fallback to default genres if API fails
+      setGenres([
+        { id: 'action', name: 'Action' },
+        { id: 'drama', name: 'Drama' },
+        { id: 'comedy', name: 'Comedy' },
+        { id: 'horror', name: 'Horror' },
+        { id: 'sci-fi', name: 'Sci-Fi' },
+        { id: 'romance', name: 'Romance' },
+        { id: 'thriller', name: 'Thriller' },
+        { id: 'documentary', name: 'Documentary' }
+      ]);
+    }
+  };
 
   const fetchCharacters = async () => {
     try {
@@ -58,16 +150,38 @@ export default function ProjectWizard() {
     try {
       const response = await api.get(`/projects/${id}`);
       const project = response.data.project;
-      setFormData({
+
+      // Check for saved wizard state in localStorage first
+      const savedState = loadWizardState(id);
+
+      const projectFormData = {
         name: project.name,
         durationSeconds: project.durationSeconds || 60,
         genre: project.genre || '',
         setting: project.setting || '',
         plot: project.plot || '',
         characterIds: project.projectCharacters?.map(pc => pc.characterId) || [],
-        voiceAssignments: {}
-      });
-      setScenes(project.scenes || []);
+        voiceAssignments: project.projectCharacters?.reduce((acc, pc) => {
+          if (pc.voiceId) acc[pc.characterId] = pc.voiceId;
+          return acc;
+        }, {}) || {}
+      };
+
+      // Merge saved state with project data - localStorage takes priority for step
+      if (savedState && savedState.projectId === id) {
+        setCurrentStep(savedState.currentStep || 1);
+        // Use saved formData for unsaved changes, but prefer project data for critical fields
+        setFormData({
+          ...projectFormData,
+          ...(savedState.formData || {})
+        });
+        setScenes(savedState.scenes || project.scenes || []);
+      } else {
+        setFormData(projectFormData);
+        setScenes(project.scenes || []);
+      }
+
+      setInitialLoadDone(true);
     } catch (error) {
       toast.error('Failed to fetch project');
       navigate('/projects');
@@ -90,7 +204,20 @@ export default function ProjectWizard() {
         await api.put(`/projects/${projectId}`, formData);
       } else {
         const response = await api.post('/projects', formData);
-        setProjectId(response.data.project.id);
+        const newProjectId = response.data.project.id;
+        setProjectId(newProjectId);
+        // Save state under new project ID
+        saveWizardState(newProjectId, {
+          currentStep,
+          formData,
+          scenes,
+          projectId: newProjectId
+        });
+        // Also save a reference in "new" key so returning to /projects/new restores the project
+        saveWizardState(null, {
+          projectId: newProjectId,
+          savedAt: Date.now()
+        });
       }
     } catch (error) {
       toast.error('Failed to save project');
@@ -117,6 +244,9 @@ export default function ProjectWizard() {
     if (!projectId) return;
     try {
       await api.post(`/projects/${projectId}/start-generation`);
+      // Clear saved wizard state when generation starts
+      clearWizardState(projectId);
+      clearWizardState(null); // Also clear "new" project state
       toast.success('Generation started');
       navigate(`/projects/${projectId}/progress`);
     } catch (error) {
@@ -182,15 +312,15 @@ export default function ProjectWizard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {genres.map(genre => (
                 <button
-                  key={genre}
-                  onClick={() => updateFormData('genre', genre)}
+                  key={genre.id}
+                  onClick={() => updateFormData('genre', genre.name)}
                   className={`px-4 py-3 rounded-lg border text-center transition-colors ${
-                    formData.genre === genre
+                    formData.genre === genre.name
                       ? 'bg-primary-600 text-white border-primary-600'
                       : 'border-gray-300 hover:border-primary-500'
                   }`}
                 >
-                  {genre}
+                  {genre.name}
                 </button>
               ))}
             </div>
