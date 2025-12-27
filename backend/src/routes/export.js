@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const videoStitcher = require('../services/video-stitcher');
 
 const router = express.Router();
 
@@ -265,31 +266,51 @@ router.post('/projects/:id/render-final', async (req, res, next) => {
       });
     }
 
-    // TODO: Implement ffmpeg video stitching
-    // This would:
-    // 1. Download all scene videos to temp directory
-    // 2. Create ffmpeg filter complex for transitions
-    // 3. Add title card if settings.addTitleCard
-    // 4. Add credits if settings.addCredits
-    // 5. Mix audio (dialogue + background music)
-    // 6. Apply volume levels (dialogueVolume, musicVolume)
-    // 7. Render final video
-    // 8. Upload to storage
-    // 9. Return final video URL
+    // Check if ffmpeg is available
+    const ffmpegAvailable = await videoStitcher.checkFfmpeg();
+    if (!ffmpegAvailable) {
+      return res.status(503).json({
+        error: 'Video rendering not available. ffmpeg is not installed on this server.',
+        message: 'Please use "Download Scenes" to get individual files and combine them manually.'
+      });
+    }
 
-    // For now, return a placeholder response
+    console.log(`[RenderFinal] Starting render for project ${project.id}`);
+    console.log(`[RenderFinal] Scenes: ${project.scenes.length}`);
+    console.log(`[RenderFinal] Settings:`, settings);
+
+    // Stitch videos together
+    const finalVideoUrl = await videoStitcher.stitchVideos(
+      project.scenes,
+      settings,
+      project.name
+    );
+
+    console.log(`[RenderFinal] Render complete: ${finalVideoUrl}`);
+
+    // Update project status
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { status: 'COMPLETE' }
+    });
+
     res.json({
       success: true,
-      message: 'Video rendering feature coming soon. For now, use "Download Scenes" and combine them manually.',
-      videoUrl: null,
+      message: 'Final video rendered successfully!',
+      videoUrl: finalVideoUrl,
       metadata: {
         sceneCount: project.scenes.length,
-        settings
+        settings,
+        duration: project.scenes.length * 6 // Approximate duration in seconds
       }
     });
+
   } catch (error) {
     console.error('Render final video error:', error);
-    next(error);
+    res.status(500).json({
+      error: error.message || 'Failed to render final video',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

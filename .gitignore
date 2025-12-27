@@ -37,6 +37,9 @@ Thumbs.db
 # Uploads
 /backend/uploads
 
+# Temporary files
+/backend/temp
+
 # Database
 *.db
 !features.db
