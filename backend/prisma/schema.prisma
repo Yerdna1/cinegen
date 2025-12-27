@@ -44,6 +44,10 @@ model UserPreferences {
   defaultVideoModel      String?  @default("kling-v2-master") @map("default_video_model")
   defaultImageModel      String?  @default("kling-v2") @map("default_image_model")
 
+  // User limits
+  maxCharacters          Int      @default(6) @map("max_characters")
+  maxImagesPerCharacter  Int      @default(5) @map("max_images_per_character")
+
   // Modal.com endpoints (per-user configuration)
   // Based on actual deployed apps from Modal CLI
 
@@ -92,15 +96,29 @@ model Character {
   userId      String   @map("user_id")
   name        String
   description String?
-  imageUrl    String?  @map("image_url")
+  imageUrl    String?  @map("image_url") // Primary/first image (for backward compatibility)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectCharacters ProjectCharacter[]
+  images            CharacterImage[]
 
   @@map("characters")
+}
+
+model CharacterImage {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  imageUrl    String   @map("image_url")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@map("character_images")
 }
 
 model Project {
