@@ -150,7 +150,10 @@ export default function ProjectWizard() {
         voiceAssignments: project.projectCharacters?.reduce((acc, pc) => {
           if (pc.voiceId) acc[pc.characterId] = pc.voiceId;
           return acc;
-        }, {}) || {}
+        }, {}) || {},
+        llmProvider: project.llmProvider || 'anthropic',
+        imageProvider: project.imageProvider || 'kling',
+        voiceProvider: project.voiceProvider || 'elevenlabs'
       };
 
       if (savedState && savedState.projectId === id) {

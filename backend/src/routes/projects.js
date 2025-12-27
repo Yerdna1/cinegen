@@ -115,7 +115,18 @@ router.get('/:id', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
-    const { name, durationSeconds, genre, setting, plot, characterIds, voiceAssignments } = req.body;
+    const {
+      name,
+      durationSeconds,
+      genre,
+      setting,
+      plot,
+      characterIds,
+      voiceAssignments,
+      llmProvider,
+      imageProvider,
+      voiceProvider
+    } = req.body;
 
     // Validate durationSeconds if provided
     if (durationSeconds !== undefined && durationSeconds !== null) {
@@ -143,16 +154,30 @@ router.put('/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    // Build update data object
+    const updateData = {
+      name: name?.trim() || existing.name,
+      durationSeconds: durationSeconds !== undefined ? parseInt(durationSeconds) : existing.durationSeconds,
+      genre: genre !== undefined ? genre : existing.genre,
+      setting: setting !== undefined ? setting : existing.setting,
+      plot: plot !== undefined ? plot : existing.plot
+    };
+
+    // Add provider fields if provided
+    if (llmProvider !== undefined) {
+      updateData.llmProvider = llmProvider;
+    }
+    if (imageProvider !== undefined) {
+      updateData.imageProvider = imageProvider;
+    }
+    if (voiceProvider !== undefined) {
+      updateData.voiceProvider = voiceProvider;
+    }
+
     // Update project
     const project = await prisma.project.update({
       where: { id: req.params.id },
-      data: {
-        name: name?.trim() || existing.name,
-        durationSeconds: durationSeconds !== undefined ? parseInt(durationSeconds) : existing.durationSeconds,
-        genre: genre !== undefined ? genre : existing.genre,
-        setting: setting !== undefined ? setting : existing.setting,
-        plot: plot !== undefined ? plot : existing.plot
-      }
+      data: updateData
     });
 
     // Update character assignments if provided
