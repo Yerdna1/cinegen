@@ -99,12 +99,15 @@ For each scene, you must generate:
 2. START_IMAGE_PROMPT: A detailed prompt describing the FIRST frame of the scene
 3. END_IMAGE_PROMPT: A detailed prompt describing the LAST frame of the scene
 
-CRITICAL REQUIREMENTS:
-- Image prompts must be visually consistent with each other (same characters, lighting, style)
-- Include specific details: character positions, expressions, camera angle, lighting, environment
-- Prompts should be suitable for AI image generation (detailed, descriptive, no ambiguity)
-- The start and end frames should show clear progression within the scene
-- Maintain visual continuity with the project's established style
+CRITICAL REQUIREMENTS FOR CHARACTER CONSISTENCY:
+- **EXACT CHARACTER APPEARANCE**: Characters must have IDENTICAL appearance across ALL scenes
+- **CLOTHING CONSISTENCY**: Describe exact clothing items (e.g., "blue cable-knit sweater, dark jeans, brown boots") and use the SAME description in every scene
+- **PHYSICAL FEATURES**: Include specific details like hair color/style, age, build, distinctive features
+- **NO VARIATION**: Do NOT change character clothing, hairstyle, or appearance between scenes unless the plot explicitly requires it
+- Image prompts must describe characters with precise, consistent details
+- Include camera angle, lighting, environment, and character positioning
+- Start and end frames should show scene progression while maintaining character consistency
+- Prompts must be detailed, descriptive, and suitable for AI image generation
 
 OUTPUT FORMAT (JSON):
 {
@@ -130,8 +133,14 @@ PROJECT DETAILS:
 - Setting: ${projectContext.setting || 'Not specified'}
 - Plot: ${projectContext.plot || 'Not specified'}
 
-CHARACTERS:
+CHARACTERS (include their EXACT appearance in image prompts):
 ${characterDescriptions || 'No characters defined'}
+
+IMPORTANT: When describing characters in image prompts, include specific details about their:
+- Clothing (exact items, colors, style)
+- Physical appearance (age, hair color/style, build, facial features)
+- Accessories or distinctive items
+Use these EXACT same descriptions in ALL scenes for consistency!
 
 PREVIOUS SCENES:
 ${previousContext || 'This is the first scene'}

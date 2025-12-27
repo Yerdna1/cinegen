@@ -1,11 +1,12 @@
 /**
  * NanoBanana Pro Image Generation Service
  *
- * Uses Google Gemini API for AI image generation.
- * This service provides text-to-image capabilities using Gemini's image generation model.
+ * Uses Google Gemini API for AI image generation with character consistency.
+ * Supports reference images for maintaining consistent character appearance across scenes.
  */
 
 const crypto = require('crypto');
+const fetch = require('node-fetch');
 
 // Encryption for API keys (same as other services)
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -55,7 +56,39 @@ class NanoBananaService {
   }
 
   /**
-   * Generate image from text prompt using Google Gemini
+   * Fetch image from URL and convert to base64
+   */
+  async fetchImageAsBase64(imageUrl) {
+    try {
+      // Handle both full URLs and relative paths
+      const fullUrl = imageUrl.startsWith('http')
+        ? imageUrl
+        : `${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:3001'}${imageUrl}`;
+
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        console.warn(`[Gemini Image] Failed to fetch image: ${fullUrl}`);
+        return null;
+      }
+
+      const buffer = await response.buffer();
+      const base64 = buffer.toString('base64');
+
+      // Determine mime type from content-type or default to jpeg
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+      return {
+        data: base64,
+        mimeType: contentType
+      };
+    } catch (error) {
+      console.error('[Gemini Image] Error fetching reference image:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate image from text prompt using Google Gemini with character consistency
    * @param {string} prompt - Text description of the image
    * @param {object} options - Generation options
    */
@@ -64,7 +97,10 @@ class NanoBananaService {
       aspectRatio = '16:9',
       style = 'cinematic',
       apiKey = null,
-      model = null // gemini-3-pro-image-preview, gemini-2.0-flash-exp, imagen-3.0-generate-002
+      model = null, // gemini-3-pro-image-preview, gemini-2.0-flash-exp, imagen-3.0-generate-002
+      referenceImages = [], // Array of character image URLs for consistency
+      imageSize = '4K', // 1K, 2K, or 4K for higher resolution
+      characterDescriptions = [] // Array of character appearance descriptions
     } = options;
 
     const key = apiKey || this.defaultApiKey;
@@ -75,23 +111,64 @@ class NanoBananaService {
     // Use provided model or default
     const modelName = model || this.defaultModel;
 
-    // Enhance prompt with style
-    const enhancedPrompt = `${style} style image: ${prompt}. High quality, detailed, professional.`;
+    // Build character consistency instruction
+    let characterContext = '';
+    if (characterDescriptions && characterDescriptions.length > 0) {
+      characterContext = `\n\nCHARACTERS (maintain exact appearance including clothing, hair, and physical features):\n${characterDescriptions.join('\n')}`;
+    }
+
+    // Enhance prompt with style and character consistency
+    const enhancedPrompt = `IMPORTANT: Preserve exact character identity, clothing, and appearance from reference images.${characterContext}
+
+${style} style image: ${prompt}
+
+Requirements:
+- Maintain consistent character appearance (same clothing, hairstyle, physical features)
+- Characters must look identical to reference images
+- High quality, detailed, professional cinematography
+- Aspect ratio: ${aspectRatio}`;
 
     const url = `${this.baseUrl}/models/${modelName}:generateContent?key=${key}`;
 
+    // Build content parts - start with text prompt
+    const contentParts = [{
+      text: enhancedPrompt
+    }];
+
+    // Add reference images (up to 14 images, max 5 people for character consistency)
+    if (referenceImages && referenceImages.length > 0) {
+      console.log(`[Gemini Image] Adding ${referenceImages.length} reference images for character consistency`);
+
+      const imageLimit = Math.min(referenceImages.length, 14); // API limit
+      for (let i = 0; i < imageLimit; i++) {
+        const imageData = await this.fetchImageAsBase64(referenceImages[i]);
+        if (imageData) {
+          contentParts.push({
+            inline_data: {
+              mime_type: imageData.mimeType,
+              data: imageData.data
+            }
+          });
+        }
+      }
+    }
+
     const body = {
       contents: [{
-        parts: [{
-          text: `Generate an image: ${enhancedPrompt}`
-        }]
+        parts: contentParts
       }],
       generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"]
+        responseModalities: ["TEXT", "IMAGE"],
+        imageSize: imageSize // 1K, 2K, or 4K
       }
     };
 
-    console.log('[Gemini Image] Calling API:', { model: modelName, promptLength: enhancedPrompt.length });
+    console.log('[Gemini Image] Calling API:', {
+      model: modelName,
+      promptLength: enhancedPrompt.length,
+      referenceImagesCount: contentParts.length - 1,
+      imageSize
+    });
 
     const response = await fetch(url, {
       method: 'POST',

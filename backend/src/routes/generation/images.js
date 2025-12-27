@@ -100,9 +100,17 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
       imageService.setKeys(accessKey, secretKey);
     }
 
-    // Collect character reference images for consistency
+    // Collect character reference images and descriptions for consistency
     const referenceImages = project.projectCharacters
       .map(pc => pc.character.imageUrl)
+      .filter(Boolean);
+
+    // Build character appearance descriptions for prompt enhancement
+    const characterDescriptions = project.projectCharacters
+      .map(pc => {
+        const char = pc.character;
+        return `- ${char.name}: ${char.description || 'Character in the scene'}`;
+      })
       .filter(Boolean);
 
     // Mark scene as generating
@@ -129,10 +137,12 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
           startImageResult = await imageService.generateImage(scene.startImagePrompt, {
             aspectRatio: '16:9',
             referenceImages,
+            characterDescriptions, // For character consistency
             style: 'cinematic',
             apiKey: imageApiKey,
             model: selectedImageModel, // For nanobanana (Gemini)
-            modelName: selectedImageModel // For kling
+            modelName: selectedImageModel, // For kling
+            imageSize: '4K' // Use 4K for best quality with Gemini 3 Pro Image
           });
         }
         tasks.startImage = startImageResult.data?.task_id;
@@ -184,10 +194,12 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
           endImageResult = await imageService.generateImage(scene.endImagePrompt, {
             aspectRatio: '16:9',
             referenceImages,
+            characterDescriptions, // For character consistency
             style: 'cinematic',
             apiKey: imageApiKey,
             model: selectedImageModel, // For nanobanana (Gemini)
-            modelName: selectedImageModel // For kling
+            modelName: selectedImageModel, // For kling
+            imageSize: '4K' // Use 4K for best quality with Gemini 3 Pro Image
           });
         }
         tasks.endImage = endImageResult.data?.task_id;
