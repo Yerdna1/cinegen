@@ -150,10 +150,12 @@ class VideoStitcher {
       ffmpeg()
         .input(`color=c=black:s=1920x1080:d=${duration}`)
         .inputOptions(['-f lavfi'])
-        .input('anullsrc')
+        .input(`anullsrc=channel_layout=stereo:sample_rate=44100`)
         .inputOptions(['-f lavfi', `-t ${duration}`])
+        .complexFilter([
+          `[0:v]drawtext=text='${text.replace(/'/g, "\\'")}':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`
+        ])
         .outputOptions([
-          `-filter_complex [0:v]drawtext=text='${text.replace(/'/g, "\\'")}':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`,
           '-map [v]',
           '-map 1:a',
           '-c:v libx264',
@@ -184,10 +186,12 @@ class VideoStitcher {
       ffmpeg()
         .input(`color=c=black:s=1920x1080:d=${duration}`)
         .inputOptions(['-f lavfi'])
-        .input('anullsrc')
+        .input(`anullsrc=channel_layout=stereo:sample_rate=44100`)
         .inputOptions(['-f lavfi', `-t ${duration}`])
+        .complexFilter([
+          `[0:v]drawtext=text='${creditsText}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`
+        ])
         .outputOptions([
-          `-filter_complex [0:v]drawtext=text='${creditsText}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2:fontfile=/System/Library/Fonts/Helvetica.ttc[v]`,
           '-map [v]',
           '-map 1:a',
           '-c:v libx264',
@@ -222,10 +226,10 @@ class VideoStitcher {
 
       // Build filter complex for transitions
       let filterComplex = [];
-      let lastOutput = '[0:v]';
 
       if (transition !== 'none' && videoPaths.length > 1) {
         // Build xfade filter chain for transitions
+        let lastOutput = '[0:v]';
         for (let i = 0; i < videoPaths.length - 1; i++) {
           const nextInput = `[${i + 1}:v]`;
           const outputLabel = i === videoPaths.length - 2 ? '[outv]' : `[v${i}]`;
@@ -240,15 +244,17 @@ class VideoStitcher {
 
           lastOutput = outputLabel;
         }
-      } else {
-        // No transitions - just concatenate
-        const inputs = videoPaths.map((_, i) => `[${i}:v]`).join('');
-        filterComplex.push(`${inputs}concat=n=${videoPaths.length}:v=1:a=0[outv]`);
-      }
 
-      // Audio handling
-      const audioInputs = videoPaths.map((_, i) => `[${i}:a]`).join('');
-      filterComplex.push(`${audioInputs}concat=n=${videoPaths.length}:v=0:a=1[outa]`);
+        // Audio handling - concat all audio streams
+        const audioInputs = videoPaths.map((_, i) => `[${i}:a]`).join('');
+        filterComplex.push(`${audioInputs}concat=n=${videoPaths.length}:v=0:a=1[outa]`);
+      } else {
+        // No transitions - just concatenate video and audio
+        const videoInputs = videoPaths.map((_, i) => `[${i}:v]`).join('');
+        const audioInputs = videoPaths.map((_, i) => `[${i}:a]`).join('');
+        filterComplex.push(`${videoInputs}concat=n=${videoPaths.length}:v=1:a=0[outv]`);
+        filterComplex.push(`${audioInputs}concat=n=${videoPaths.length}:v=0:a=1[outa]`);
+      }
 
       // Add background music if provided
       if (settings.backgroundMusicUrl) {
@@ -263,6 +269,8 @@ class VideoStitcher {
       } else {
         filterComplex.push('[outa]volume=1[aout]');
       }
+
+      console.log('[ffmpeg] Filter complex:', JSON.stringify(filterComplex, null, 2));
 
       command
         .complexFilter(filterComplex)
@@ -290,9 +298,29 @@ class VideoStitcher {
         })
         .on('error', (error) => {
           console.error('[ffmpeg] Error:', error);
+          console.error('[ffmpeg] Filter complex was:', JSON.stringify(filterComplex, null, 2));
           reject(error);
         })
         .run();
+    });
+  }
+
+  /**
+   * Check if a video has an audio stream
+   */
+  async hasAudioStream(videoPath) {
+    return new Promise((resolve) => {
+      ffmpeg.ffprobe(videoPath, (err, metadata) => {
+        if (err) {
+          console.error(`[VideoStitcher] Error probing ${videoPath}:`, err);
+          resolve(false);
+          return;
+        }
+
+        const hasAudio = metadata.streams.some(stream => stream.codec_type === 'audio');
+        console.log(`[VideoStitcher] ${videoPath} has audio: ${hasAudio}`);
+        resolve(hasAudio);
+      });
     });
   }
 
