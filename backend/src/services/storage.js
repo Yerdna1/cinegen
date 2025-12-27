@@ -2,21 +2,24 @@
  * Storage Service
  *
  * Handles file storage with support for:
- * - Local file system (development)
- * - Vercel Blob (production)
+ * - Vercel Blob (preferred - always used when token available)
+ * - Local file system (fallback when no cloud storage)
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Check if we're in production (Vercel)
-const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+// Use Vercel Blob if token is available, regardless of environment
+// This ensures files are accessible from both local and production
+const hasBlobToken = !!process.env.BLOB_READ_WRITE_TOKEN;
+const useCloudStorage = hasBlobToken;
 
 class StorageService {
   constructor() {
-    this.isProduction = isProduction;
+    this.useCloudStorage = useCloudStorage;
 
-    if (!this.isProduction) {
+    if (!this.useCloudStorage) {
+      console.log('[Storage] No BLOB_READ_WRITE_TOKEN found, using local storage');
       // Ensure local upload directories exist
       const uploadsDir = path.join(process.cwd(), 'uploads');
       const imagesDir = path.join(uploadsDir, 'images');
@@ -27,6 +30,8 @@ class StorageService {
           fs.mkdirSync(dir, { recursive: true });
         }
       });
+    } else {
+      console.log('[Storage] Using Vercel Blob cloud storage');
     }
   }
 
@@ -42,7 +47,7 @@ class StorageService {
     // Convert base64 to buffer if needed
     const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'base64');
 
-    if (this.isProduction) {
+    if (this.useCloudStorage) {
       return this.uploadToVercelBlob(buffer, filename, folder, contentType);
     } else {
       return this.uploadToLocal(buffer, filename, folder);
@@ -89,7 +94,7 @@ class StorageService {
    * @param {string} url - The file URL to delete
    */
   async delete(url) {
-    if (this.isProduction) {
+    if (this.useCloudStorage) {
       return this.deleteFromVercelBlob(url);
     } else {
       return this.deleteFromLocal(url);
