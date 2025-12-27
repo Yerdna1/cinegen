@@ -8,7 +8,9 @@
 
 class ModalTTSService {
   constructor() {
-    this.apiKey = process.env.MODAL_API_KEY;
+    // Modal authentication (from modal token list)
+    this.modalKey = process.env.MODAL_KEY;
+    this.modalSecret = process.env.MODAL_SECRET;
     this.defaultF5ttsEndpoint = process.env.MODAL_F5TTS_ENDPOINT;
     this.defaultChatterboxEndpoint = process.env.MODAL_CHATTERBOX_ENDPOINT;
   }
@@ -148,7 +150,7 @@ class ModalTTSService {
   /**
    * Generate speech using Chatterbox
    * @param {string} endpoint - Endpoint URL
-   * @param {string} voiceId - Voice identifier
+   * @param {string} voiceId - Voice identifier (used as voice_S3_key if it's a path)
    * @param {string} text - Text to synthesize
    * @param {object} options - Generation options
    */
@@ -157,35 +159,48 @@ class ModalTTSService {
       throw new Error('Chatterbox endpoint not configured. Please add it in Settings.');
     }
 
-    const {
-      emotion = 'neutral', // neutral, happy, sad, angry, excited
-      speed = 1.0
-    } = options;
+    if (!this.modalKey || !this.modalSecret) {
+      throw new Error('Modal authentication not configured. Set MODAL_KEY and MODAL_SECRET in environment.');
+    }
 
+    // Chatterbox Modal endpoint expects: { text, voice_S3_key? }
     const body = {
-      voice_id: voiceId,
-      text,
-      emotion,
-      speed
+      text
     };
 
-    // Modal endpoints are complete URLs (e.g., https://user--app-function.modal.run)
-    // Don't append anything - use the endpoint as-is
+    // If voiceId looks like an S3 path, use it for voice cloning
+    if (voiceId && voiceId.includes('/')) {
+      body.voice_S3_key = voiceId;
+    }
+
+    // Modal endpoints require Modal-Key and Modal-Secret headers for authenticated endpoints
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
+        'Modal-Key': this.modalKey,
+        'Modal-Secret': this.modalSecret,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `Chatterbox generation failed: ${response.status}`);
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Chatterbox generation failed: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+
+    // Handle S3 key response (the Chatterbox endpoint returns { s3_key: "tts/uuid.wav" })
+    if (data.s3_key) {
+      // Construct the S3 URL from the bucket and key
+      const s3Bucket = process.env.MODAL_S3_BUCKET || 'hey-gen-clone-yerdna';
+      const audioUrl = `https://${s3Bucket}.s3.amazonaws.com/${data.s3_key}`;
+      return {
+        audioUrl,
+        status: 'completed'
+      };
+    }
 
     // Handle async task response
     if (data.task_id) {
