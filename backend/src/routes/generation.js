@@ -13,6 +13,7 @@ const { getImageProvider, getAvailableImageProviders } = require('../services/im
 const { getAvailableTTSProviders, getAllVoices, generateSpeech } = require('../services/tts-factory');
 const elevenlabsService = require('../services/elevenlabs');
 const storage = require('../services/storage');
+const { createUsageService } = require('../services/usage');
 
 /**
  * GET /api/generation/providers
@@ -121,6 +122,17 @@ router.post('/projects/:id/scenes/:sceneId/generate-content', async (req, res, n
         emotions: generatedContent.emotions || scene.emotions,
         actions: generatedContent.actions || scene.actions
       }
+    });
+
+    // Record LLM usage
+    const usageService = createUsageService(prisma);
+    await usageService.recordLLMUsage(req.user.id, {
+      provider: providerName,
+      model: generatedContent.model || 'default',
+      operation: 'generate-scene-content',
+      inputTokens: generatedContent.inputTokens,
+      outputTokens: generatedContent.outputTokens,
+      metadata: { projectId: req.params.id, sceneId: req.params.sceneId }
     });
 
     res.json({
@@ -348,6 +360,18 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
       await prisma.scene.update({
         where: { id: req.params.sceneId },
         data: { status: 'FAILED' }
+      });
+    }
+
+    // Record image usage
+    const imagesGenerated = (tasks.startImageUrl ? 1 : 0) + (tasks.endImageUrl ? 1 : 0);
+    if (imagesGenerated > 0) {
+      const usageService = createUsageService(prisma);
+      await usageService.recordImageUsage(req.user.id, {
+        provider: providerName,
+        operation: 'generate-scene-images',
+        count: imagesGenerated,
+        metadata: { projectId: req.params.id, sceneId: req.params.sceneId }
       });
     }
 
@@ -799,6 +823,15 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
           message: 'Audio generated successfully!'
         });
       }
+
+      // Record audio/TTS usage
+      const usageService = createUsageService(prisma);
+      await usageService.recordTTSUsage(req.user.id, {
+        provider,
+        operation: 'generate-scene-audio',
+        durationSeconds: result.durationSeconds || Math.ceil(scene.dialogue.length / 15), // Estimate ~15 chars/sec
+        metadata: { projectId: req.params.id, sceneId: req.params.sceneId, voiceId: voice }
+      });
 
       res.json({
         success: true,
@@ -1257,6 +1290,15 @@ router.post('/projects/:id/scenes/:sceneId/generate-video', async (req, res, nex
         message: 'Video generation in progress...'
       });
     }
+
+    // Record video generation usage (pending - will complete when video is ready)
+    const usageService = createUsageService(prisma);
+    await usageService.recordVideoUsage(req.user.id, {
+      provider: 'piapi',
+      operation: 'generate-scene-video',
+      count: 1,
+      metadata: { projectId: req.params.id, sceneId: req.params.sceneId, taskId, duration }
+    });
 
     res.json({
       success: true,
