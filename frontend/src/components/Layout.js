@@ -19,7 +19,8 @@ import {
   SunIcon,
   MoonIcon,
   SparklesIcon,
-  LanguageIcon
+  LanguageIcon,
+  QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -28,7 +29,8 @@ import {
   Cog6ToothIcon as Cog6ToothIconSolid,
   PhotoIcon as PhotoIconSolid,
   ChartBarIcon as ChartBarIconSolid,
-  ShieldCheckIcon as ShieldCheckIconSolid
+  ShieldCheckIcon as ShieldCheckIconSolid,
+  QuestionMarkCircleIcon as QuestionMarkCircleIconSolid
 } from '@heroicons/react/24/solid';
 import api from '../services/api';
 
@@ -38,6 +40,7 @@ const navigation = [
   { key: 'characters', href: '/characters', icon: UsersIcon, iconSolid: UsersIconSolid },
   { key: 'gallery', href: '/gallery', icon: PhotoIcon, iconSolid: PhotoIconSolid },
   { key: 'statistics', href: '/statistics', icon: ChartBarIcon, iconSolid: ChartBarIconSolid },
+  { key: 'help', href: '/help', icon: QuestionMarkCircleIcon, iconSolid: QuestionMarkCircleIconSolid },
   { key: 'settings', href: '/settings', icon: Cog6ToothIcon, iconSolid: Cog6ToothIconSolid }
 ];
 

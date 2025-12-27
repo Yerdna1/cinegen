@@ -44,6 +44,7 @@
     "characters": "Characters",
     "gallery": "Gallery",
     "statistics": "Statistics",
+    "help": "Help",
     "settings": "Settings",
     "admin": "Admin",
     "logout": "Logout",
@@ -347,5 +348,141 @@
 
   "footer": {
     "tagline": "AI-Powered Cinematic Content Creation"
+  },
+
+  "help": {
+    "title": "How to Create Your Movie",
+    "subtitle": "Complete step-by-step guide for beginners",
+    "intro": {
+      "title": "Welcome to CineGen!",
+      "description": "CineGen is an AI-powered platform that helps you create cinematic content. Follow these steps to create your first short movie from idea to final video."
+    },
+    "stepsTitle": "Step-by-Step Guide",
+    "howTo": "How to do it",
+    "tip": "Tip",
+    "steps": {
+      "createProject": {
+        "title": "Create a New Project",
+        "summary": "Start by setting up your movie project with basic information",
+        "description": "Every movie starts with a project. Here you define the genre, setting, plot, and duration of your short film. This information helps the AI understand what kind of content to generate.",
+        "instructions": {
+          "1": "Click 'Projects' in the left menu and then 'New Project'",
+          "2": "Choose a genre (drama, comedy, action, horror, etc.)",
+          "3": "Write a short plot description - what happens in your story",
+          "4": "Select the desired duration (1-5 minutes recommended for beginners)"
+        },
+        "tip": "Start with a simple story with 1-2 characters. Complex plots work better once you understand the workflow."
+      },
+      "addCharacters": {
+        "title": "Add Characters",
+        "summary": "Create the characters that will appear in your movie",
+        "description": "Characters are the actors in your movie. Upload reference images to help the AI maintain visual consistency throughout all generated images and videos.",
+        "instructions": {
+          "1": "Go to 'Characters' in the left menu",
+          "2": "Click 'New Character' and give them a name",
+          "3": "Upload 1-5 reference images showing the character from different angles",
+          "4": "Write a brief description of their personality and appearance"
+        },
+        "tip": "Use consistent images - same person, similar lighting. This helps AI generate consistent-looking characters across scenes."
+      },
+      "generateContent": {
+        "title": "Generate Scene Content",
+        "summary": "Let AI write dialogue and create image descriptions for each scene",
+        "description": "For each scene, the AI will generate dialogue, emotions, actions, and detailed prompts for the start and end images. This creates the story backbone.",
+        "instructions": {
+          "1": "Open your project and go to the Scenes tab",
+          "2": "Click 'Generate Content' for each scene",
+          "3": "Review the generated dialogue and image prompts",
+          "4": "Edit any text if needed - you have full control"
+        },
+        "tip": "Generate all scene content first before moving to images. This ensures story coherence."
+      },
+      "generateImages": {
+        "title": "Generate Scene Images",
+        "summary": "Create start and end frame images for each scene",
+        "description": "Each scene needs a start image (how it begins) and end image (how it ends). These images will be used to generate the video with smooth transitions.",
+        "instructions": {
+          "1": "Make sure scene content (prompts) is generated first",
+          "2": "Click 'Generate Images' for each scene",
+          "3": "Wait for both start and end images to be created",
+          "4": "If you don't like an image, you can regenerate it"
+        },
+        "tip": "Check that characters look consistent between scenes. Regenerate any images that don't match."
+      },
+      "generateVideos": {
+        "title": "Generate Scene Videos",
+        "summary": "Transform your images into animated video clips",
+        "description": "Using AI video generation, the start and end images are transformed into smooth 5-second video clips. The AI adds motion, expressions, and camera movement.",
+        "instructions": {
+          "1": "Ensure both start and end images exist for the scene",
+          "2": "Click 'Generate Video' button",
+          "3": "Wait for video generation (this may take 2-5 minutes)",
+          "4": "Preview the video and regenerate if needed"
+        },
+        "tip": "Professional mode produces better quality but costs more. Use Standard mode for drafts."
+      },
+      "generateAudio": {
+        "title": "Generate Audio/Voiceover",
+        "summary": "Add voice narration and dialogue to your scenes",
+        "description": "Transform your written dialogue into spoken audio using AI text-to-speech. Choose different voices for different characters to bring your story to life.",
+        "instructions": {
+          "1": "Assign voices to characters in project settings",
+          "2": "Click 'Generate Audio' for scenes with dialogue",
+          "3": "Preview the generated voiceover",
+          "4": "Adjust voice settings if needed"
+        },
+        "tip": "Match voice tone to character personality. An older character should have a mature voice."
+      },
+      "combineInEditor": {
+        "title": "Combine in Video Editor",
+        "summary": "Download all assets and assemble your final movie",
+        "description": "CineGen generates individual scene videos and audio. To create your final movie, you'll need to combine them in a video editing software. This gives you full creative control.",
+        "instructions": {
+          "1": "Download all scene videos from your project",
+          "2": "Download all audio files",
+          "3": "Import everything into your video editor",
+          "4": "Arrange scenes, add transitions, music, and export"
+        },
+        "tip": "CapCut is free and beginner-friendly. DaVinci Resolve is free and more powerful."
+      }
+    },
+    "editors": {
+      "title": "Recommended Video Editors",
+      "description": "After generating all your scene videos and audio, use one of these editors to combine everything into your final movie:",
+      "capcut": {
+        "name": "CapCut",
+        "desc": "Free, beginner-friendly, mobile & desktop"
+      },
+      "davinci": {
+        "name": "DaVinci Resolve",
+        "desc": "Free professional editor, powerful features"
+      },
+      "premiere": {
+        "name": "Adobe Premiere Pro",
+        "desc": "Industry standard, subscription required"
+      },
+      "filmora": {
+        "name": "Filmora",
+        "desc": "Easy to use, affordable one-time purchase"
+      }
+    },
+    "workflow": {
+      "title": "Quick Workflow Summary",
+      "project": "Project",
+      "characters": "Characters",
+      "content": "Content",
+      "images": "Images",
+      "videos": "Videos",
+      "audio": "Audio",
+      "edit": "Edit"
+    },
+    "tips": {
+      "title": "Pro Tips for Beginners",
+      "1": "Start small - create a 30-60 second movie first to learn the workflow.",
+      "2": "Use high-quality character reference images for best consistency.",
+      "3": "Review and edit AI-generated content before generating images.",
+      "4": "Generate images in batches - all scenes at once for consistent style.",
+      "5": "Save your project frequently and download generated assets as backups."
+    }
   }
 }

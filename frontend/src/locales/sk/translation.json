@@ -44,6 +44,7 @@
     "characters": "Postavy",
     "gallery": "Galéria",
     "statistics": "Štatistiky",
+    "help": "Pomoc",
     "settings": "Nastavenia",
     "admin": "Administrácia",
     "logout": "Odhlásiť sa",
@@ -347,5 +348,141 @@
 
   "footer": {
     "tagline": "Tvorba filmového obsahu pomocou AI"
+  },
+
+  "help": {
+    "title": "Ako vytvoriť váš film",
+    "subtitle": "Kompletný sprievodca krok za krokom pre začiatočníkov",
+    "intro": {
+      "title": "Vitajte v CineGen!",
+      "description": "CineGen je platforma poháňaná AI, ktorá vám pomôže vytvárať filmový obsah. Postupujte podľa týchto krokov a vytvorte svoj prvý krátky film od nápadu po finálne video."
+    },
+    "stepsTitle": "Sprievodca krok za krokom",
+    "howTo": "Ako na to",
+    "tip": "Tip",
+    "steps": {
+      "createProject": {
+        "title": "Vytvorte nový projekt",
+        "summary": "Začnite nastavením projektu s základnými informáciami",
+        "description": "Každý film začína projektom. Tu definujete žáner, prostredie, dej a trvanie vášho krátkeho filmu. Tieto informácie pomáhajú AI pochopiť, aký obsah má generovať.",
+        "instructions": {
+          "1": "Kliknite na 'Projekty' v ľavom menu a potom 'Nový projekt'",
+          "2": "Vyberte žáner (dráma, komédia, akčný, horor, atď.)",
+          "3": "Napíšte krátky popis deja - čo sa vo vašom príbehu deje",
+          "4": "Vyberte požadované trvanie (1-5 minút sa odporúča pre začiatočníkov)"
+        },
+        "tip": "Začnite s jednoduchým príbehom s 1-2 postavami. Zložité deje fungujú lepšie, keď pochopíte pracovný postup."
+      },
+      "addCharacters": {
+        "title": "Pridajte postavy",
+        "summary": "Vytvorte postavy, ktoré sa objavia vo vašom filme",
+        "description": "Postavy sú hercami vo vašom filme. Nahrajte referenčné obrázky, aby AI udržala vizuálnu konzistenciu vo všetkých generovaných obrázkoch a videách.",
+        "instructions": {
+          "1": "Prejdite na 'Postavy' v ľavom menu",
+          "2": "Kliknite na 'Nová postava' a pomenujte ju",
+          "3": "Nahrajte 1-5 referenčných obrázkov ukazujúcich postavu z rôznych uhlov",
+          "4": "Napíšte stručný popis jej osobnosti a vzhľadu"
+        },
+        "tip": "Používajte konzistentné obrázky - rovnaká osoba, podobné osvetlenie. To pomáha AI generovať konzistentne vyzerajúce postavy naprieč scénami."
+      },
+      "generateContent": {
+        "title": "Generujte obsah scén",
+        "summary": "Nechajte AI napísať dialógy a vytvoriť popisy obrázkov pre každú scénu",
+        "description": "Pre každú scénu AI vygeneruje dialógy, emócie, akcie a detailné pokyny pre úvodný a záverečný obrázok. Toto vytvára kostru príbehu.",
+        "instructions": {
+          "1": "Otvorte projekt a prejdite na záložku Scény",
+          "2": "Kliknite na 'Generovať obsah' pre každú scénu",
+          "3": "Skontrolujte vygenerované dialógy a popisy obrázkov",
+          "4": "Upravte akýkoľvek text podľa potreby - máte plnú kontrolu"
+        },
+        "tip": "Vygenerujte najprv celý obsah scén pred prechodom na obrázky. Toto zabezpečí súdržnosť príbehu."
+      },
+      "generateImages": {
+        "title": "Generujte obrázky scén",
+        "summary": "Vytvorte úvodný a záverečný obrázok pre každú scénu",
+        "description": "Každá scéna potrebuje úvodný obrázok (ako začína) a záverečný obrázok (ako končí). Tieto obrázky sa použijú na generovanie videa s plynulými prechodmi.",
+        "instructions": {
+          "1": "Uistite sa, že je najprv vygenerovaný obsah scény (popisy)",
+          "2": "Kliknite na 'Generovať obrázky' pre každú scénu",
+          "3": "Počkajte na vytvorenie úvodného aj záverečného obrázka",
+          "4": "Ak sa vám obrázok nepáči, môžete ho pregenerovať"
+        },
+        "tip": "Skontrolujte, či postavy vyzerajú konzistentne medzi scénami. Pregenerujte obrázky, ktoré sa nezhodujú."
+      },
+      "generateVideos": {
+        "title": "Generujte videá scén",
+        "summary": "Premeňte obrázky na animované videoklipy",
+        "description": "Pomocou AI generovania videa sa úvodné a záverečné obrázky premenia na plynulé 5-sekundové videoklipy. AI pridá pohyb, výrazy a pohyb kamery.",
+        "instructions": {
+          "1": "Uistite sa, že pre scénu existujú oba obrázky (úvodný aj záverečný)",
+          "2": "Kliknite na tlačidlo 'Generovať video'",
+          "3": "Počkajte na generovanie videa (môže to trvať 2-5 minút)",
+          "4": "Pozrite si náhľad videa a v prípade potreby ho pregenerujte"
+        },
+        "tip": "Profesionálny režim produkuje lepšiu kvalitu, ale stojí viac. Používajte štandardný režim pre koncepty."
+      },
+      "generateAudio": {
+        "title": "Generujte zvuk/komentár",
+        "summary": "Pridajte hlasový komentár a dialógy do vašich scén",
+        "description": "Premeňte napísané dialógy na hovorený zvuk pomocou AI prevodu textu na reč. Vyberte rôzne hlasy pre rôzne postavy a oživte svoj príbeh.",
+        "instructions": {
+          "1": "Priraďte hlasy postavám v nastaveniach projektu",
+          "2": "Kliknite na 'Generovať zvuk' pre scény s dialógmi",
+          "3": "Pozrite si náhľad vygenerovaného komentára",
+          "4": "V prípade potreby upravte nastavenia hlasu"
+        },
+        "tip": "Prispôsobte tón hlasu osobnosti postavy. Staršia postava by mala mať zrelý hlas."
+      },
+      "combineInEditor": {
+        "title": "Spojte vo video editore",
+        "summary": "Stiahnite všetky prvky a zostavte finálny film",
+        "description": "CineGen generuje jednotlivé videá scén a zvuk. Na vytvorenie finálneho filmu ich budete musieť spojiť v softvéri na úpravu videa. Toto vám dáva plnú kreatívnu kontrolu.",
+        "instructions": {
+          "1": "Stiahnite všetky videá scén z projektu",
+          "2": "Stiahnite všetky zvukové súbory",
+          "3": "Importujte všetko do vášho video editora",
+          "4": "Usporiadajte scény, pridajte prechody, hudbu a exportujte"
+        },
+        "tip": "CapCut je zadarmo a vhodný pre začiatočníkov. DaVinci Resolve je zadarmo a výkonnejší."
+      }
+    },
+    "editors": {
+      "title": "Odporúčané video editory",
+      "description": "Po vygenerovaní všetkých videí scén a zvuku použite jeden z týchto editorov na spojenie všetkého do finálneho filmu:",
+      "capcut": {
+        "name": "CapCut",
+        "desc": "Zadarmo, vhodný pre začiatočníkov, mobil a počítač"
+      },
+      "davinci": {
+        "name": "DaVinci Resolve",
+        "desc": "Bezplatný profesionálny editor, výkonné funkcie"
+      },
+      "premiere": {
+        "name": "Adobe Premiere Pro",
+        "desc": "Priemyselný štandard, vyžaduje predplatné"
+      },
+      "filmora": {
+        "name": "Filmora",
+        "desc": "Jednoduché použitie, dostupný jednorazový nákup"
+      }
+    },
+    "workflow": {
+      "title": "Rýchly prehľad pracovného postupu",
+      "project": "Projekt",
+      "characters": "Postavy",
+      "content": "Obsah",
+      "images": "Obrázky",
+      "videos": "Videá",
+      "audio": "Zvuk",
+      "edit": "Úprava"
+    },
+    "tips": {
+      "title": "Profesionálne tipy pre začiatočníkov",
+      "1": "Začnite v malom - vytvorte najprv 30-60 sekundový film, aby ste sa naučili pracovný postup.",
+      "2": "Používajte kvalitné referenčné obrázky postáv pre najlepšiu konzistenciu.",
+      "3": "Skontrolujte a upravte AI-generovaný obsah pred generovaním obrázkov.",
+      "4": "Generujte obrázky v dávkach - všetky scény naraz pre konzistentný štýl.",
+      "5": "Často ukladajte projekt a sťahujte vygenerované prvky ako zálohy."
+    }
   }
 }

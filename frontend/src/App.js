@@ -24,6 +24,7 @@ import Characters from './pages/Characters';
 import CharacterForm from './pages/CharacterForm';
 import Settings from './pages/Settings';
 import Statistics from './pages/Statistics';
+import Help from './pages/Help';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -90,6 +91,7 @@ function App() {
         <Route path="settings" element={<Settings />} />
         <Route path="statistics" element={<Statistics />} />
         <Route path="gallery" element={<Gallery />} />
+        <Route path="help" element={<Help />} />
 
         {/* Admin Routes */}
         <Route
