@@ -606,6 +606,12 @@ router.get('/voices/:provider', async (req, res, next) => {
  * Generate audio for a scene's dialogue
  */
 router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, next) => {
+  console.log('[Audio Generation] Request received:', {
+    projectId: req.params.id,
+    sceneId: req.params.sceneId,
+    body: req.body
+  });
+
   try {
     const prisma = req.app.get('prisma');
     const broadcastProgress = req.app.get('broadcastProgress');
