@@ -17,7 +17,9 @@ export default function Settings() {
   const providers = [
     { id: 'hailuo', name: 'Hailuo/Kling', description: 'For video generation' },
     { id: 'nanobanana', name: 'NanoBanana', description: 'For image generation' },
-    { id: '11labs', name: '11Labs', description: 'For voice/audio generation' }
+    { id: '11labs', name: '11Labs', description: 'For voice/audio generation' },
+    { id: 'anthropic', name: 'Anthropic Claude', description: 'For AI scene content generation' },
+    { id: 'modal', name: 'Modal.com', description: 'For self-hosted AI models (LLM/Image)' }
   ];
 
   useEffect(() => {

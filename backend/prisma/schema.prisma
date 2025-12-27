@@ -68,6 +68,7 @@ model Project {
   plot            String?
   llmProvider     String?  @default("anthropic") @map("llm_provider") // anthropic, modal
   imageProvider   String?  @default("kling") @map("image_provider") // kling, nanobanana, piapi, modal
+  voiceProvider   String?  @default("elevenlabs") @map("voice_provider") // elevenlabs, modal-f5tts, modal-chatterbox
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -86,6 +87,8 @@ model ProjectCharacter {
   characterId     String  @map("character_id")
   roleDescription String? @map("role_description")
   voiceId         String? @map("voice_id")
+  voiceProvider   String? @map("voice_provider") // elevenlabs, modal-f5tts, modal-chatterbox
+  voiceName       String? @map("voice_name") // Display name of the voice
 
   // Relations
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
