@@ -146,6 +146,108 @@ router.put('/api-keys', async (req, res, next) => {
   }
 });
 
+// GET /api/users/preferences
+router.get('/preferences', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+
+    let preferences = await prisma.userPreferences.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    // If no preferences exist, create default ones
+    if (!preferences) {
+      preferences = await prisma.userPreferences.create({
+        data: {
+          userId: req.user.id,
+          defaultLlmProvider: 'anthropic',
+          defaultImageProvider: 'kling',
+          defaultVoiceProvider: 'elevenlabs'
+        }
+      });
+    }
+
+    res.json({
+      preferences: {
+        defaultLlmProvider: preferences.defaultLlmProvider,
+        defaultImageProvider: preferences.defaultImageProvider,
+        defaultVoiceProvider: preferences.defaultVoiceProvider,
+        modalLlmEndpoint: preferences.modalLlmEndpoint,
+        modalImageEndpoint: preferences.modalImageEndpoint,
+        modalF5ttsEndpoint: preferences.modalF5ttsEndpoint,
+        modalChatterboxEndpoint: preferences.modalChatterboxEndpoint
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/users/preferences
+router.put('/preferences', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const {
+      defaultLlmProvider,
+      defaultImageProvider,
+      defaultVoiceProvider,
+      modalLlmEndpoint,
+      modalImageEndpoint,
+      modalF5ttsEndpoint,
+      modalChatterboxEndpoint
+    } = req.body;
+
+    // Validate providers
+    const validLlmProviders = ['anthropic', 'modal'];
+    const validImageProviders = ['kling', 'piapi', 'nanobanana', 'modal'];
+    const validVoiceProviders = ['elevenlabs', 'modal-f5tts', 'modal-chatterbox'];
+
+    if (defaultLlmProvider && !validLlmProviders.includes(defaultLlmProvider)) {
+      return res.status(400).json({ error: 'Invalid LLM provider' });
+    }
+    if (defaultImageProvider && !validImageProviders.includes(defaultImageProvider)) {
+      return res.status(400).json({ error: 'Invalid image provider' });
+    }
+    if (defaultVoiceProvider && !validVoiceProviders.includes(defaultVoiceProvider)) {
+      return res.status(400).json({ error: 'Invalid voice provider' });
+    }
+
+    // Build update data
+    const updateData = {};
+    if (defaultLlmProvider !== undefined) updateData.defaultLlmProvider = defaultLlmProvider;
+    if (defaultImageProvider !== undefined) updateData.defaultImageProvider = defaultImageProvider;
+    if (defaultVoiceProvider !== undefined) updateData.defaultVoiceProvider = defaultVoiceProvider;
+    if (modalLlmEndpoint !== undefined) updateData.modalLlmEndpoint = modalLlmEndpoint;
+    if (modalImageEndpoint !== undefined) updateData.modalImageEndpoint = modalImageEndpoint;
+    if (modalF5ttsEndpoint !== undefined) updateData.modalF5ttsEndpoint = modalF5ttsEndpoint;
+    if (modalChatterboxEndpoint !== undefined) updateData.modalChatterboxEndpoint = modalChatterboxEndpoint;
+
+    const preferences = await prisma.userPreferences.upsert({
+      where: { userId: req.user.id },
+      update: updateData,
+      create: {
+        userId: req.user.id,
+        ...updateData
+      }
+    });
+
+    res.json({
+      message: 'Preferences updated successfully',
+      preferences: {
+        defaultLlmProvider: preferences.defaultLlmProvider,
+        defaultImageProvider: preferences.defaultImageProvider,
+        defaultVoiceProvider: preferences.defaultVoiceProvider,
+        modalLlmEndpoint: preferences.modalLlmEndpoint,
+        modalImageEndpoint: preferences.modalImageEndpoint,
+        modalF5ttsEndpoint: preferences.modalF5ttsEndpoint,
+        modalChatterboxEndpoint: preferences.modalChatterboxEndpoint
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // DELETE /api/users/account
 router.delete('/account', async (req, res, next) => {
   try {

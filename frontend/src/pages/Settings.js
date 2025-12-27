@@ -8,8 +8,18 @@ export default function Settings() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [apiKeys, setApiKeys] = useState({});
+  const [preferences, setPreferences] = useState({
+    defaultLlmProvider: 'anthropic',
+    defaultImageProvider: 'kling',
+    defaultVoiceProvider: 'elevenlabs',
+    modalLlmEndpoint: '',
+    modalImageEndpoint: '',
+    modalF5ttsEndpoint: '',
+    modalChatterboxEndpoint: ''
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
+  const [savingPrefs, setSavingPrefs] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -19,11 +29,30 @@ export default function Settings() {
     { id: 'nanobanana', name: 'NanoBanana', description: 'For image generation' },
     { id: '11labs', name: '11Labs', description: 'For voice/audio generation' },
     { id: 'anthropic', name: 'Anthropic Claude', description: 'For AI scene content generation' },
-    { id: 'modal', name: 'Modal.com', description: 'For self-hosted AI models (LLM/Image)' }
+    { id: 'modal', name: 'Modal.com', description: 'For self-hosted AI models' }
+  ];
+
+  const llmProviderOptions = [
+    { id: 'anthropic', name: 'Anthropic Claude', description: 'Cloud-based LLM' },
+    { id: 'modal', name: 'Modal.com (Qwen)', description: 'Self-hosted on Modal.com' }
+  ];
+
+  const imageProviderOptions = [
+    { id: 'kling', name: 'Kling AI', description: 'Via official API' },
+    { id: 'piapi', name: 'PiAPI (Kling)', description: 'Via membership credits' },
+    { id: 'nanobanana', name: 'NanoBanana', description: 'Image generation API' },
+    { id: 'modal', name: 'Modal.com (Flux)', description: 'Self-hosted on Modal.com' }
+  ];
+
+  const voiceProviderOptions = [
+    { id: 'elevenlabs', name: 'ElevenLabs', description: 'High-quality AI voices' },
+    { id: 'modal-f5tts', name: 'F5-TTS (Modal)', description: 'Self-hosted on Modal.com' },
+    { id: 'modal-chatterbox', name: 'Chatterbox (Modal)', description: 'Self-hosted on Modal.com' }
   ];
 
   useEffect(() => {
     fetchApiKeys();
+    fetchPreferences();
   }, []);
 
   const fetchApiKeys = async () => {
@@ -39,6 +68,34 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPreferences = async () => {
+    try {
+      const response = await api.get('/users/preferences');
+      setPreferences(prev => ({
+        ...prev,
+        ...response.data.preferences
+      }));
+    } catch (error) {
+      console.error('Failed to fetch preferences:', error);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    setSavingPrefs(true);
+    try {
+      await api.put('/users/preferences', preferences);
+      toast.success('Preferences saved successfully');
+    } catch (error) {
+      toast.error('Failed to save preferences');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const updatePreference = (key, value) => {
+    setPreferences(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSaveKey = async (provider, value) => {
@@ -103,6 +160,152 @@ export default function Settings() {
             <label className="block text-sm font-medium text-gray-700">Role</label>
             <p className="mt-1 text-gray-900">{user?.role}</p>
           </div>
+        </div>
+      </div>
+
+      {/* Default Providers Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Default Providers</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Set your default AI providers for new projects. These will be pre-selected when creating projects.
+        </p>
+
+        <div className="space-y-6">
+          {/* LLM Provider */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">LLM Provider (for dialogue generation)</label>
+            <div className="grid grid-cols-2 gap-3">
+              {llmProviderOptions.map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => updatePreference('defaultLlmProvider', opt.id)}
+                  className={`p-3 border rounded-lg text-left transition-colors ${
+                    preferences.defaultLlmProvider === opt.id
+                      ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{opt.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">{opt.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Image Provider */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Image Provider</label>
+            <div className="grid grid-cols-2 gap-3">
+              {imageProviderOptions.map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => updatePreference('defaultImageProvider', opt.id)}
+                  className={`p-3 border rounded-lg text-left transition-colors ${
+                    preferences.defaultImageProvider === opt.id
+                      ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{opt.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">{opt.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Voice Provider */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Voice Provider (for TTS)</label>
+            <div className="grid grid-cols-3 gap-3">
+              {voiceProviderOptions.map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => updatePreference('defaultVoiceProvider', opt.id)}
+                  className={`p-3 border rounded-lg text-left transition-colors ${
+                    preferences.defaultVoiceProvider === opt.id
+                      ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{opt.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">{opt.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleSavePreferences}
+            disabled={savingPrefs}
+            className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          >
+            {savingPrefs ? 'Saving...' : 'Save Default Providers'}
+          </button>
+        </div>
+      </div>
+
+      {/* Modal.com Endpoints Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Modal.com Endpoints</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Configure your self-hosted Modal.com endpoints for AI services. These are used when Modal providers are selected.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">LLM Endpoint (Qwen)</label>
+            <input
+              type="text"
+              value={preferences.modalLlmEndpoint || ''}
+              onChange={(e) => updatePreference('modalLlmEndpoint', e.target.value)}
+              placeholder="https://your-username--qwen-serve.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Image Endpoint (Flux)</label>
+            <input
+              type="text"
+              value={preferences.modalImageEndpoint || ''}
+              onChange={(e) => updatePreference('modalImageEndpoint', e.target.value)}
+              placeholder="https://your-username--flux-image-serve.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">F5-TTS Endpoint</label>
+            <input
+              type="text"
+              value={preferences.modalF5ttsEndpoint || ''}
+              onChange={(e) => updatePreference('modalF5ttsEndpoint', e.target.value)}
+              placeholder="https://your-username--f5-tts-serve.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Chatterbox Endpoint</label>
+            <input
+              type="text"
+              value={preferences.modalChatterboxEndpoint || ''}
+              onChange={(e) => updatePreference('modalChatterboxEndpoint', e.target.value)}
+              placeholder="https://your-username--chatterbox-tts-serve.modal.run"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <button
+            onClick={handleSavePreferences}
+            disabled={savingPrefs}
+            className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          >
+            {savingPrefs ? 'Saving...' : 'Save Endpoints'}
+          </button>
         </div>
       </div>
 

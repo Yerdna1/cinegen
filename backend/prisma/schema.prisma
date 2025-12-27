@@ -22,8 +22,33 @@ model User {
   apiKeys       ApiKey[]
   characters    Character[]
   projects      Project[]
+  preferences   UserPreferences?
 
   @@map("users")
+}
+
+model UserPreferences {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique @map("user_id")
+
+  // Default providers for new projects
+  defaultLlmProvider     String?  @default("anthropic") @map("default_llm_provider")
+  defaultImageProvider   String?  @default("kling") @map("default_image_provider")
+  defaultVoiceProvider   String?  @default("elevenlabs") @map("default_voice_provider")
+
+  // Modal.com endpoints (per-user configuration)
+  modalLlmEndpoint       String?  @map("modal_llm_endpoint")
+  modalImageEndpoint     String?  @map("modal_image_endpoint")
+  modalF5ttsEndpoint     String?  @map("modal_f5tts_endpoint")
+  modalChatterboxEndpoint String? @map("modal_chatterbox_endpoint")
+
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 }
 
 model ApiKey {
