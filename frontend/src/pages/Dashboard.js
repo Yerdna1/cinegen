@@ -21,6 +21,7 @@ const clearNewWizardState = () => {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ projects: 0, characters: 0 });
   const [recentProjects, setRecentProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -117,7 +118,7 @@ export default function Dashboard() {
         {/* Projects Card */}
         <div
           className="cinema-card p-6 group cursor-pointer"
-          onClick={() => window.location.href = '/projects'}
+          onClick={() => navigate('/projects')}
         >
           <div className="flex items-start justify-between">
             <div>
@@ -144,7 +145,7 @@ export default function Dashboard() {
         {/* Characters Card */}
         <div
           className="cinema-card p-6 group cursor-pointer"
-          onClick={() => window.location.href = '/characters'}
+          onClick={() => navigate('/characters')}
         >
           <div className="flex items-start justify-between">
             <div>
@@ -174,7 +175,7 @@ export default function Dashboard() {
           style={{
             background: 'linear-gradient(135deg, var(--color-accent) 0%, #B45309 100%)'
           }}
-          onClick={() => { clearNewWizardState(); window.location.href = '/projects/new'; }}
+          onClick={() => { clearNewWizardState(); navigate('/projects/new'); }}
         >
           <div className="flex items-start justify-between">
             <div>
