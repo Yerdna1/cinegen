@@ -235,4 +235,188 @@ router.get('/projects/:id/download', async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/export/projects/:id/render-final
+ * Stitch all scene videos into final MP4 with music, transitions, titles
+ */
+router.post('/projects/:id/render-final', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const { settings } = req.body;
+
+    // Verify project ownership
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      include: {
+        scenes: {
+          where: { videoUrl: { not: null } },
+          orderBy: { sequenceNumber: 'asc' }
+        }
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.scenes.length === 0) {
+      return res.status(400).json({
+        error: 'No videos generated yet. Please generate scene videos first.'
+      });
+    }
+
+    // TODO: Implement ffmpeg video stitching
+    // This would:
+    // 1. Download all scene videos to temp directory
+    // 2. Create ffmpeg filter complex for transitions
+    // 3. Add title card if settings.addTitleCard
+    // 4. Add credits if settings.addCredits
+    // 5. Mix audio (dialogue + background music)
+    // 6. Apply volume levels (dialogueVolume, musicVolume)
+    // 7. Render final video
+    // 8. Upload to storage
+    // 9. Return final video URL
+
+    // For now, return a placeholder response
+    res.json({
+      success: true,
+      message: 'Video rendering feature coming soon. For now, use "Download Scenes" and combine them manually.',
+      videoUrl: null,
+      metadata: {
+        sceneCount: project.scenes.length,
+        settings
+      }
+    });
+  } catch (error) {
+    console.error('Render final video error:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/export/projects/:id/export-capcut
+ * Generate CapCut project file with scene references
+ */
+router.post('/projects/:id/export-capcut', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const { settings } = req.body;
+
+    // Verify project ownership
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      include: {
+        scenes: {
+          where: { videoUrl: { not: null } },
+          orderBy: { sequenceNumber: 'asc' }
+        }
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.scenes.length === 0) {
+      return res.status(400).json({
+        error: 'No videos generated yet. Please generate scene videos first.'
+      });
+    }
+
+    // TODO: Implement CapCut project file generation
+    // CapCut uses a JSON-based project format that references media files
+    // Structure would include timeline, tracks, clips, transitions, effects
+
+    res.json({
+      success: true,
+      message: 'CapCut export coming soon. Use "Download Scenes" to get individual files.',
+      downloadUrl: null
+    });
+  } catch (error) {
+    console.error('CapCut export error:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/export/projects/:id/download-scenes
+ * Get list of all scene video URLs for download
+ */
+router.post('/projects/:id/download-scenes', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+
+    // Verify project ownership
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      include: {
+        scenes: {
+          where: { videoUrl: { not: null } },
+          orderBy: { sequenceNumber: 'asc' }
+        }
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.scenes.length === 0) {
+      return res.status(400).json({
+        error: 'No videos generated yet. Please generate scene videos first.'
+      });
+    }
+
+    // Return list of scene URLs for manual download
+    const sceneUrls = project.scenes.map((scene) => ({
+      filename: `scene_${scene.sequenceNumber}_${project.name.replace(/[^a-z0-9]/gi, '_')}.mp4`,
+      url: scene.videoUrl,
+      sequenceNumber: scene.sequenceNumber,
+      dialogue: scene.dialogue
+    }));
+
+    res.json({
+      success: true,
+      message: 'Scene download links ready',
+      scenes: sceneUrls,
+      // TODO: In future, create actual ZIP file and return download URL
+      downloadUrl: null
+    });
+  } catch (error) {
+    console.error('Download scenes error:', error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/export/background-music
+ * List available background music tracks
+ */
+router.get('/background-music', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+
+    const tracks = await prisma.backgroundMusic.findMany({
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        durationSeconds: true
+      }
+    });
+
+    res.json({
+      success: true,
+      tracks
+    });
+  } catch (error) {
+    console.error('Failed to fetch background music:', error);
+    // Return empty array if table doesn't exist or is empty
+    res.json({
+      success: true,
+      tracks: []
+    });
+  }
+});
+
 module.exports = router;

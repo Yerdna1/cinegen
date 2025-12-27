@@ -11,7 +11,7 @@ import StepCharacters from './StepCharacters';
 import StepPlot from './StepPlot';
 import StepVoices from './StepVoices';
 import StepReview from './StepReview';
-import StepGenerate from './StepGenerate';
+import StepFinalize from './StepFinalize';
 import EditSceneModal from './EditSceneModal';
 
 // Helpers
@@ -414,7 +414,7 @@ export default function ProjectWizard() {
           />
         );
       case 8:
-        return <StepGenerate onStartGeneration={startGeneration} />;
+        return <StepFinalize projectId={projectId} scenes={scenes} />;
       default:
         return null;
     }
