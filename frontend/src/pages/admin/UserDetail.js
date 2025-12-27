@@ -18,6 +18,9 @@ import {
   ClockIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import StatCard from '../../components/admin/StatCard';
+import StatusBadge from '../../components/admin/StatusBadge';
+import CategoryBadge from '../../components/admin/CategoryBadge';
 
 export default function AdminUserDetail() {
   const { id } = useParams();
@@ -84,60 +87,6 @@ export default function AdminUserDetail() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'COMPLETE':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-            {t('projects.status.completed')}
-          </span>
-        );
-      case 'GENERATING':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-            {t('projects.status.inProgress')}
-          </span>
-        );
-      case 'FAILED':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-red-500/10 text-red-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-            {t('projects.status.failed')}
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full" style={{ backgroundColor: 'var(--color-bg-surface)', color: 'var(--color-text-muted)' }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-text-muted)' }}></span>
-            {t('projects.status.draft')}
-          </span>
-        );
-    }
-  };
-
-  const getCategoryBadge = (category) => {
-    const colors = {
-      llm: { bg: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' },
-      image: { bg: 'rgba(16, 185, 129, 0.1)', color: '#10B981' },
-      video: { bg: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' },
-      audio: { bg: 'rgba(236, 72, 153, 0.1)', color: '#EC4899' },
-      tts: { bg: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' },
-      credit: { bg: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }
-    };
-
-    const style = colors[category] || { bg: 'var(--color-bg-surface)', color: 'var(--color-text-muted)' };
-
-    return (
-      <span
-        className="px-2 py-1 text-xs font-medium rounded-full uppercase"
-        style={{ backgroundColor: style.bg, color: style.color }}
-      >
-        {category}
-      </span>
-    );
-  };
 
   if (loading) {
     return (
@@ -235,73 +184,34 @@ export default function AdminUserDetail() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="cinema-card p-5">
-          <div className="flex items-center gap-3">
-            <div
-              className="p-2.5 rounded-lg"
-              style={{ backgroundColor: 'var(--color-accent-subtle)' }}
-            >
-              <CurrencyDollarIcon className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
-            </div>
-            <div>
-              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Credit Balance</p>
-              <p className="text-xl font-bold" style={{ color: 'var(--color-accent)' }}>
-                ${(usageData?.user?.creditBalance || 0).toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="cinema-card p-5">
-          <div className="flex items-center gap-3">
-            <div
-              className="p-2.5 rounded-lg"
-              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-            >
-              <ChartBarIcon className="w-5 h-5 text-red-500" />
-            </div>
-            <div>
-              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Total Spent</p>
-              <p className="text-xl font-bold text-red-500">
-                ${(usageData?.totalCost || 0).toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="cinema-card p-5">
-          <div className="flex items-center gap-3">
-            <div
-              className="p-2.5 rounded-lg"
-              style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}
-            >
-              <FolderIcon className="w-5 h-5 text-violet-500" />
-            </div>
-            <div>
-              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Projects</p>
-              <p className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                {user._count?.projects || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="cinema-card p-5">
-          <div className="flex items-center gap-3">
-            <div
-              className="p-2.5 rounded-lg"
-              style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)' }}
-            >
-              <UserGroupIcon className="w-5 h-5 text-pink-500" />
-            </div>
-            <div>
-              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Characters</p>
-              <p className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                {user._count?.characters || 0}
-              </p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          icon={CurrencyDollarIcon}
+          label="Credit Balance"
+          value={`$${(usageData?.user?.creditBalance || 0).toFixed(2)}`}
+          color="var(--color-accent-subtle)"
+          valueColor="var(--color-accent)"
+        />
+        <StatCard
+          icon={ChartBarIcon}
+          label="Total Spent"
+          value={`$${(usageData?.totalCost || 0).toFixed(2)}`}
+          color="rgba(239, 68, 68, 0.1)"
+          valueColor="#EF4444"
+        />
+        <StatCard
+          icon={FolderIcon}
+          label="Projects"
+          value={user._count?.projects || 0}
+          color="rgba(139, 92, 246, 0.1)"
+          valueColor="var(--color-text-primary)"
+        />
+        <StatCard
+          icon={UserGroupIcon}
+          label="Characters"
+          value={user._count?.characters || 0}
+          color="rgba(236, 72, 153, 0.1)"
+          valueColor="var(--color-text-primary)"
+        />
       </div>
 
       {/* User Info & Projects Grid */}
@@ -370,7 +280,7 @@ export default function AdminUserDetail() {
                     <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
                       {project.name}
                     </span>
-                    {getStatusBadge(project.status)}
+                    <StatusBadge status={project.status} />
                   </div>
                   <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
                     {new Date(project.createdAt).toLocaleDateString()}
@@ -440,7 +350,7 @@ export default function AdminUserDetail() {
                       {new Date(record.createdAt).toLocaleString()}
                     </td>
                     <td className="px-6 py-3">
-                      {getCategoryBadge(record.category)}
+                      <CategoryBadge category={record.category} />
                     </td>
                     <td className="px-6 py-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                       {record.provider}

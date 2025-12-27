@@ -2,11 +2,14 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { put, del } = require('@vercel/blob');
+const { checkCharacterOwnership } = require('../middleware/characterOwnership');
+const {
+  uploadCharacterImage,
+  deleteCharacterImages,
+  getUserLimits
+} = require('../services/character-image');
 
 const router = express.Router();
-
-// Check if running in Vercel serverless
 const isVercel = process.env.VERCEL === '1';
 
 // Configure multer for image uploads (memory storage for Vercel Blob)
@@ -35,23 +38,6 @@ const upload = multer({
   }
 });
 
-// Helper to get user limits
-async function getUserLimits(prisma, userId) {
-  let prefs = await prisma.userPreferences.findUnique({
-    where: { userId }
-  });
-
-  if (!prefs) {
-    prefs = await prisma.userPreferences.create({
-      data: { userId }
-    });
-  }
-
-  return {
-    maxCharacters: prefs.maxCharacters || 6,
-    maxImagesPerCharacter: prefs.maxImagesPerCharacter || 5
-  };
-}
 
 // GET /api/characters
 router.get('/', async (req, res, next) => {
@@ -119,57 +105,27 @@ router.post('/', async (req, res, next) => {
 });
 
 // GET /api/characters/:id
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', checkCharacterOwnership, async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
-    const character = await prisma.character.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
-      include: {
-        images: {
-          orderBy: { sortOrder: 'asc' }
-        }
-      }
-    });
-
-    if (!character) {
-      return res.status(404).json({ error: 'Character not found' });
-    }
-
-    // Get user limits
     const limits = await getUserLimits(prisma, req.user.id);
-
-    res.json({ character, limits });
+    res.json({ character: req.character, limits });
   } catch (error) {
     next(error);
   }
 });
 
 // PUT /api/characters/:id
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', checkCharacterOwnership, async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
     const { name, description } = req.body;
 
-    // Check ownership
-    const existing = await prisma.character.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
-    });
-
-    if (!existing) {
-      return res.status(404).json({ error: 'Character not found' });
-    }
-
     const character = await prisma.character.update({
       where: { id: req.params.id },
       data: {
-        name: name?.trim() || existing.name,
-        description: description?.trim() || existing.description
+        name: name?.trim() || req.character.name,
+        description: description?.trim() || req.character.description
       },
       include: {
         images: {
@@ -185,35 +141,12 @@ router.put('/:id', async (req, res, next) => {
 });
 
 // DELETE /api/characters/:id
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', checkCharacterOwnership, async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
 
-    // Check ownership
-    const existing = await prisma.character.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
-      include: {
-        images: true
-      }
-    });
-
-    if (!existing) {
-      return res.status(404).json({ error: 'Character not found' });
-    }
-
-    // Delete images from blob storage if on Vercel
-    if (isVercel) {
-      for (const img of existing.images) {
-        try {
-          await del(img.imageUrl);
-        } catch (e) {
-          console.error('Failed to delete blob:', e);
-        }
-      }
-    }
+    // Delete images from storage
+    await deleteCharacterImages(req.character.images);
 
     await prisma.character.delete({
       where: { id: req.params.id }
@@ -226,24 +159,9 @@ router.delete('/:id', async (req, res, next) => {
 });
 
 // POST /api/characters/:id/upload-image
-router.post('/:id/upload-image', upload.single('image'), async (req, res, next) => {
+router.post('/:id/upload-image', checkCharacterOwnership, upload.single('image'), async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
-
-    // Check ownership
-    const existing = await prisma.character.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
-      include: {
-        images: true
-      }
-    });
-
-    if (!existing) {
-      return res.status(404).json({ error: 'Character not found' });
-    }
 
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
@@ -251,31 +169,17 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res, next) 
 
     // Check image limit
     const limits = await getUserLimits(prisma, req.user.id);
-    if (existing.images.length >= limits.maxImagesPerCharacter) {
+    if (req.character.images.length >= limits.maxImagesPerCharacter) {
       return res.status(400).json({
         error: `Image limit reached. Maximum ${limits.maxImagesPerCharacter} images per character allowed.`
       });
     }
 
-    let imageUrl;
-
-    if (isVercel) {
-      // Use Vercel Blob storage in production
-      const ext = path.extname(req.file.originalname);
-      const filename = `characters/${uuidv4()}${ext}`;
-      const blob = await put(filename, req.file.buffer, {
-        access: 'public',
-        contentType: req.file.mimetype
-      });
-      imageUrl = blob.url;
-    } else {
-      // Use local file storage in development
-      imageUrl = `/uploads/characters/${req.file.filename}`;
-    }
+    const imageUrl = await uploadCharacterImage(req.file);
 
     // Get the next sort order
-    const maxSortOrder = existing.images.length > 0
-      ? Math.max(...existing.images.map(img => img.sortOrder))
+    const maxSortOrder = req.character.images.length > 0
+      ? Math.max(...req.character.images.map(img => img.sortOrder))
       : -1;
 
     // Create the character image record
@@ -288,7 +192,7 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res, next) 
     });
 
     // Update the main imageUrl if this is the first image
-    if (existing.images.length === 0) {
+    if (req.character.images.length === 0) {
       await prisma.character.update({
         where: { id: req.params.id },
         data: { imageUrl }
@@ -312,40 +216,18 @@ router.post('/:id/upload-image', upload.single('image'), async (req, res, next) 
 });
 
 // DELETE /api/characters/:id/images/:imageId
-router.delete('/:id/images/:imageId', async (req, res, next) => {
+router.delete('/:id/images/:imageId', checkCharacterOwnership, async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
+    const { deleteCharacterImage } = require('../services/character-image');
 
-    // Check ownership
-    const character = await prisma.character.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
-      include: {
-        images: {
-          orderBy: { sortOrder: 'asc' }
-        }
-      }
-    });
-
-    if (!character) {
-      return res.status(404).json({ error: 'Character not found' });
-    }
-
-    const imageToDelete = character.images.find(img => img.id === req.params.imageId);
+    const imageToDelete = req.character.images.find(img => img.id === req.params.imageId);
     if (!imageToDelete) {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    // Delete from blob storage if on Vercel
-    if (isVercel) {
-      try {
-        await del(imageToDelete.imageUrl);
-      } catch (e) {
-        console.error('Failed to delete blob:', e);
-      }
-    }
+    // Delete from storage
+    await deleteCharacterImage(imageToDelete.imageUrl);
 
     // Delete the image record
     await prisma.characterImage.delete({
@@ -353,7 +235,7 @@ router.delete('/:id/images/:imageId', async (req, res, next) => {
     });
 
     // Update primary imageUrl if we deleted the primary image
-    const remainingImages = character.images.filter(img => img.id !== req.params.imageId);
+    const remainingImages = req.character.images.filter(img => img.id !== req.params.imageId);
     const newPrimaryUrl = remainingImages.length > 0 ? remainingImages[0].imageUrl : null;
 
     await prisma.character.update({
@@ -378,25 +260,10 @@ router.delete('/:id/images/:imageId', async (req, res, next) => {
 });
 
 // PUT /api/characters/:id/images/reorder
-router.put('/:id/images/reorder', async (req, res, next) => {
+router.put('/:id/images/reorder', checkCharacterOwnership, async (req, res, next) => {
   try {
     const prisma = req.app.get('prisma');
-    const { imageIds } = req.body; // Array of image IDs in new order
-
-    // Check ownership
-    const character = await prisma.character.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
-      include: {
-        images: true
-      }
-    });
-
-    if (!character) {
-      return res.status(404).json({ error: 'Character not found' });
-    }
+    const { imageIds } = req.body;
 
     if (!Array.isArray(imageIds)) {
       return res.status(400).json({ error: 'imageIds must be an array' });

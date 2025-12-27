@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, useBeforeUnload } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
   PhotoIcon,
-  PlusIcon,
-  XMarkIcon,
-  TrashIcon,
   UserCircleIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import UnsavedChangesModal from '../components/UnsavedChangesModal';
+import { ImageGrid, NewImageGrid } from '../components/ImageGrid';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
@@ -30,87 +30,25 @@ export default function CharacterForm() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [isDirty, setIsDirty] = useState(false);
   const [initialValues, setInitialValues] = useState({ name: '', description: '' });
-  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState(null);
-  const hasUnsavedChangesRef = useRef(false);
   const isSubmittingRef = useRef(false);
+
+  const {
+    isDirty,
+    setIsDirty,
+    hasUnsavedChanges,
+    showUnsavedModal,
+    setShowUnsavedModal,
+    pendingNavigation,
+    setPendingNavigation
+  } = useUnsavedChanges(
+    initialValues,
+    { name, description },
+    () => newImages.length > 0
+  );
 
   // Calculate remaining image slots
   const remainingSlots = limits.maxImagesPerCharacter - images.length - newImages.length;
-
-  // Check if form has unsaved changes
-  const hasUnsavedChanges = useCallback(() => {
-    return isDirty && (name !== initialValues.name || description !== initialValues.description || newImages.length > 0);
-  }, [isDirty, name, description, newImages.length, initialValues]);
-
-  // Keep ref updated for use in event handlers
-  useEffect(() => {
-    hasUnsavedChangesRef.current = hasUnsavedChanges();
-  }, [hasUnsavedChanges]);
-
-  // Intercept link clicks globally to show warning
-  useEffect(() => {
-    const handleClick = (e) => {
-      const link = e.target.closest('a[href]');
-      if (!link) return;
-
-      const href = link.getAttribute('href');
-      if (!href || !href.startsWith('/') || href.startsWith('/characters/new') || href.startsWith(`/characters/${id}`)) return;
-
-      if (hasUnsavedChangesRef.current) {
-        e.preventDefault();
-        e.stopPropagation();
-        setPendingNavigation(href);
-        setShowUnsavedModal(true);
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [id]);
-
-  // Handle browser back/forward buttons
-  useEffect(() => {
-    const handlePopState = () => {
-      if (hasUnsavedChangesRef.current) {
-        window.history.pushState(null, '', window.location.pathname);
-        setShowUnsavedModal(true);
-        setPendingNavigation('__BACK__');
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    window.history.pushState(null, '', window.location.pathname);
-
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // Browser beforeunload event
-  useBeforeUnload(
-    useCallback((e) => {
-      if (hasUnsavedChanges()) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    }, [hasUnsavedChanges])
-  );
-
-  const confirmLeave = () => {
-    setShowUnsavedModal(false);
-    if (pendingNavigation === '__BACK__') {
-      window.history.back();
-    } else if (pendingNavigation) {
-      navigate(pendingNavigation);
-    }
-    setPendingNavigation(null);
-  };
-
-  const cancelLeave = () => {
-    setShowUnsavedModal(false);
-    setPendingNavigation(null);
-  };
 
   useEffect(() => {
     if (isEditing) {
@@ -336,67 +274,22 @@ export default function CharacterForm() {
 
           {/* Existing Images */}
           {images.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
-              {images.map((img, index) => (
-                <div
-                  key={img.id}
-                  className="relative aspect-square rounded-lg overflow-hidden group"
-                  style={{ backgroundColor: 'var(--color-bg-surface)' }}
-                >
-                  <img
-                    src={getImageUrl(img.imageUrl)}
-                    alt={`Character ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  {index === 0 && (
-                    <div
-                      className="absolute top-2 left-2 px-2 py-0.5 rounded text-xs font-medium"
-                      style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-bg-primary)' }}
-                    >
-                      Primary
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => deleteExistingImage(img.id)}
-                    className="absolute top-2 right-2 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+            <div className="mb-4">
+              <ImageGrid
+                images={images}
+                getImageUrl={getImageUrl}
+                onDelete={deleteExistingImage}
+              />
             </div>
           )}
 
           {/* New Images Preview */}
           {newImages.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
-              {newImages.map((img, index) => (
-                <div
-                  key={index}
-                  className="relative aspect-square rounded-lg overflow-hidden group"
-                  style={{ backgroundColor: 'var(--color-bg-surface)' }}
-                >
-                  <img
-                    src={img.preview}
-                    alt={`New ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  <div
-                    className="absolute top-2 left-2 px-2 py-0.5 rounded text-xs font-medium"
-                    style={{ backgroundColor: 'rgba(16, 185, 129, 0.9)', color: 'white' }}
-                  >
-                    New
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeNewImage(index)}
-                    className="absolute top-2 right-2 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white"
-                  >
-                    <XMarkIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+            <div className="mb-4">
+              <NewImageGrid
+                images={newImages}
+                onRemove={removeNewImage}
+              />
             </div>
           )}
 
@@ -490,41 +383,11 @@ export default function CharacterForm() {
       </form>
 
       {/* Unsaved Changes Modal */}
-      {showUnsavedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="cinema-card w-full max-w-md p-6 animate-fade-in">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-full" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
-                <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />
-              </div>
-              <h3 className="text-lg font-display font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Unsaved Changes
-              </h3>
-            </div>
-            <p className="mb-6" style={{ color: 'var(--color-text-muted)' }}>
-              You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={cancelLeave}
-                className="flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors"
-                style={{
-                  backgroundColor: 'var(--color-bg-surface)',
-                  color: 'var(--color-text-secondary)'
-                }}
-              >
-                Stay
-              </button>
-              <button
-                onClick={confirmLeave}
-                className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
-              >
-                Leave
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <UnsavedChangesModal
+        show={showUnsavedModal}
+        onCancel={() => setShowUnsavedModal(false)}
+        pendingNavigation={pendingNavigation}
+      />
     </div>
   );
 }
