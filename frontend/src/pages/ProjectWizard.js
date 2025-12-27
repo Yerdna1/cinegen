@@ -205,7 +205,8 @@ export default function ProjectWizard() {
         }, {}) || {}
       };
 
-      // Merge saved state with project data - localStorage takes priority for step
+      // Merge saved state with project data - localStorage takes priority for step and form
+      // But ALWAYS use database scenes to ensure latest generated content is shown
       if (savedState && savedState.projectId === id) {
         setCurrentStep(savedState.currentStep || 1);
         // Use saved formData for unsaved changes, but EXCLUDE provider fields
@@ -215,11 +216,11 @@ export default function ProjectWizard() {
           ...projectFormData,
           ...savedFormDataWithoutProviders
         });
-        setScenes(savedState.scenes || project.scenes || []);
       } else {
         setFormData(projectFormData);
-        setScenes(project.scenes || []);
       }
+      // Always use database scenes - they are the source of truth
+      setScenes(project.scenes || []);
 
       setInitialLoadDone(true);
     } catch (error) {
