@@ -9,7 +9,13 @@
       "Bash(npx prisma db seed:*)",
       "Bash(node create-user.js:*)",
       "Bash(npx prisma db execute:*)",
-      "Bash(node fix-user.js:*)"
+      "Bash(node fix-user.js:*)",
+      "Bash(node setup-user-settings.js:*)",
+      "Bash(modal app:*)",
+      "Bash(modal --help:*)",
+      "Bash(modal profile current:*)",
+      "Bash(node update-modal-endpoints.js:*)",
+      "Bash(node:*)"
     ]
   }
 }

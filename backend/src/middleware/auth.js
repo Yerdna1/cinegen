@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key';
+const JWT_EXPIRY = (process.env.JWT_EXPIRY || '7d').trim().replace(/[\r\n]/g, '');
 
 /**
  * Middleware to authenticate JWT tokens
@@ -46,7 +47,7 @@ const generateToken = (user) => {
       role: user.role
     },
     JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRY || '7d' }
+    { expiresIn: JWT_EXPIRY }
   );
 };
 
