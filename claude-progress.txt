@@ -174,6 +174,39 @@ curl -X PATCH http://localhost:8765/features/{id} -H "Content-Type: application/
 ./init.sh start    # Start servers only
 ```
 
+## Session 3 Progress (2025-12-27)
+
+### Verified Features
+1. **Feature #53 - Unsaved changes warning on form** - PASSED
+   - Implemented global navigation interception for unsaved changes
+   - Uses link click interception at document level (capture phase)
+   - Uses useBeforeUnload hook for browser refresh/close protection
+   - Uses popstate event handling for browser back/forward buttons
+   - Modal displayed with "Stay" and "Leave" options
+   - All test steps verified:
+     - Navigate to character creation ✓
+     - Fill in character name (TEST_UNSAVED_53) ✓
+     - Try to navigate away (via sidebar) ✓
+     - Warning modal appears ✓
+     - Cancel navigation stays on form ✓
+     - Save form, navigate away successfully ✓
+
+### Technical Implementation Details
+- CharacterForm.js updated with:
+  - `isDirty` state to track form modifications
+  - `hasUnsavedChanges()` callback to determine if changes exist
+  - `hasUnsavedChangesRef` ref for use in event handlers (avoids stale closures)
+  - Document-level click handler to intercept anchor link clicks
+  - Popstate event handler for browser navigation buttons
+  - useBeforeUnload hook for tab/browser close protection
+  - Modal component for user confirmation
+
+### Regression Tests Performed
+- Feature #22: Project persists after refresh - STILL PASSING
+
+### Current Progress
+- **46/95 features passing (48.4%)**
+
 ## Notes
 
 - All features are stored in features.db SQLite database
