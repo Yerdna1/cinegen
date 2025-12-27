@@ -6,10 +6,26 @@
  * instead of separate API credits.
  *
  * Based on the Python autonomous agent implementation.
+ *
+ * Note: The Claude Agent SDK is lazy-loaded because it may not work in
+ * serverless environments like Vercel.
  */
 
-const { query } = require('@anthropic-ai/claude-agent-sdk');
 const crypto = require('crypto');
+
+// Lazy load the Claude Agent SDK to avoid issues in serverless
+let query = null;
+function getQuery() {
+  if (!query) {
+    try {
+      query = require('@anthropic-ai/claude-agent-sdk').query;
+    } catch (error) {
+      console.error('Claude Agent SDK not available:', error.message);
+      query = null;
+    }
+  }
+  return query;
+}
 
 // Decryption helper for user API keys stored in database
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -79,12 +95,17 @@ class ClaudeSDKService {
    * @param {object} projectContext - Project-level context
    */
   async generateSceneContent(_apiKey, sceneContext, projectContext) {
+    const queryFn = getQuery();
+    if (!queryFn) {
+      throw new Error('Claude Agent SDK not available in this environment. Use Anthropic API instead.');
+    }
+
     const prompt = this.buildScenePrompt(sceneContext, projectContext);
 
     try {
       let result = null;
 
-      for await (const message of query({
+      for await (const message of queryFn({
         prompt,
         options: {
           model: this.model,
@@ -215,6 +236,12 @@ Generate the scene content now. Respond ONLY with valid JSON.`;
    * @param {object} projectContext - Project-level context
    */
   async generateVideoPrompt(sceneContext, projectContext) {
+    const queryFn = getQuery();
+    if (!queryFn) {
+      // Return a default prompt when SDK is not available
+      return 'Natural camera movement with smooth transition between the start and end frames.';
+    }
+
     const prompt = `Generate a video motion prompt for transitioning between two frames in a movie scene.
 
 PROJECT CONTEXT:
@@ -245,7 +272,7 @@ Respond with ONLY the video prompt text, no JSON or extra formatting.`;
     try {
       let result = null;
 
-      for await (const message of query({
+      for await (const message of getQuery()({
         prompt,
         options: {
           model: this.model,
@@ -287,7 +314,7 @@ Respond with ONLY the video prompt text, no JSON or extra formatting.`;
 
       // Quick test query
       let success = false;
-      for await (const message of query({
+      for await (const message of getQuery()({
         prompt: 'Say "ok"',
         options: {
           model: this.model,
