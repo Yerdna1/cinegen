@@ -23,6 +23,7 @@ import ProjectReview from './pages/ProjectReview';
 import Characters from './pages/Characters';
 import CharacterForm from './pages/CharacterForm';
 import Settings from './pages/Settings';
+import Statistics from './pages/Statistics';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -87,6 +88,7 @@ function App() {
         <Route path="characters/new" element={<CharacterForm />} />
         <Route path="characters/:id" element={<CharacterForm />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="statistics" element={<Statistics />} />
         <Route path="gallery" element={<Gallery />} />
 
         {/* Admin Routes */}

@@ -16,6 +16,7 @@ model User {
   passwordHash  String    @map("password_hash")
   emailVerified Boolean   @default(false) @map("email_verified")
   role          String    @default("USER") // USER or ADMIN
+  creditBalance Float     @default(0) @map("credit_balance") // Current credit balance
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -24,6 +25,7 @@ model User {
   characters    Character[]
   projects      Project[]
   preferences   UserPreferences?
+  usageRecords  UsageRecord[]
 
   @@map("users")
 }
@@ -196,6 +198,32 @@ model VerificationToken {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("verification_tokens")
+}
+
+model UsageRecord {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  category      String   // llm, image, video, audio, tts
+  provider      String   // anthropic, openai, kling, hailuo, elevenlabs, modal, etc.
+  model         String?  // claude-3-opus, gpt-4, etc. (for LLM)
+  operation     String   // generate, edit, transcribe, etc.
+  inputTokens   Int?     @map("input_tokens")
+  outputTokens  Int?     @map("output_tokens")
+  totalTokens   Int?     @map("total_tokens")
+  imagesCount   Int?     @map("images_count")
+  videosCount   Int?     @map("videos_count")
+  audioSeconds  Int?     @map("audio_seconds") // Duration in seconds
+  cost          Float?   // Estimated cost in credits/dollars
+  metadata      String?  // JSON string for extra info
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, category])
+  @@index([userId, createdAt])
+  @@index([category, provider])
+  @@map("usage_records")
 }
 
 model GalleryItem {

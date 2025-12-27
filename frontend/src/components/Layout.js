@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -10,14 +10,18 @@ import {
   Bars3Icon,
   XMarkIcon,
   ShieldCheckIcon,
-  PhotoIcon
+  PhotoIcon,
+  ChartBarIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
+import api from '../services/api';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Projects', href: '/projects', icon: FilmIcon },
   { name: 'Characters', href: '/characters', icon: UsersIcon },
   { name: 'Gallery', href: '/gallery', icon: PhotoIcon },
+  { name: 'Statistics', href: '/statistics', icon: ChartBarIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon }
 ];
 
@@ -27,9 +31,23 @@ const adminNavigation = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(null);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchCreditBalance();
+  }, []);
+
+  const fetchCreditBalance = async () => {
+    try {
+      const response = await api.get('/statistics/credit-balance');
+      setCreditBalance(response.data.creditBalance);
+    } catch (error) {
+      console.error('Failed to fetch credit balance:', error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -137,6 +155,15 @@ export default function Layout() {
           </button>
           <div className="flex-1" />
           <div className="flex items-center space-x-4">
+            {creditBalance !== null && (
+              <Link
+                to="/statistics"
+                className="flex items-center px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors"
+              >
+                <CurrencyDollarIcon className="w-4 h-4 mr-1" />
+                <span className="text-sm font-medium">{creditBalance.toFixed(2)}</span>
+              </Link>
+            )}
             <span className="text-sm text-gray-600">{user?.email}</span>
           </div>
         </header>

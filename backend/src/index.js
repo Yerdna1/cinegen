@@ -18,6 +18,7 @@ const adminRoutes = require('./routes/admin');
 const exportRoutes = require('./routes/export');
 const galleryRoutes = require('./routes/gallery');
 const generationRoutes = require('./routes/generation');
+const statisticsRoutes = require('./routes/statistics');
 
 // Import Inngest
 const { serve } = require('inngest/express');
@@ -113,6 +114,7 @@ app.use('/api/voices', authenticateToken, voiceRoutes);
 app.use('/api/export', authenticateToken, exportRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes);
 app.use('/api/generation', authenticateToken, generationRoutes);
+app.use('/api/statistics', authenticateToken, statisticsRoutes);
 
 // Inngest endpoint for background jobs
 app.use('/api/inngest', serve({
