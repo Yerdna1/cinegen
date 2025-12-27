@@ -120,7 +120,15 @@ class ClaudeSDKService {
       }
 
       if (result) {
-        return this.parseSceneContent(result);
+        const parsed = this.parseSceneContent(result);
+        // Claude SDK uses subscription model - estimate tokens for tracking purposes
+        // Estimate ~500 input tokens (prompt) and ~300 output tokens (response)
+        return {
+          ...parsed,
+          model: this.model,
+          inputTokens: Math.ceil(prompt.length / 4), // Rough estimate: 4 chars per token
+          outputTokens: Math.ceil((result?.length || 300) / 4)
+        };
       }
 
       // Fallback if no result
@@ -129,7 +137,10 @@ class ClaudeSDKService {
         startImagePrompt: '',
         endImagePrompt: '',
         emotions: '',
-        actions: ''
+        actions: '',
+        model: this.model,
+        inputTokens: 0,
+        outputTokens: 0
       };
     } catch (error) {
       console.error('Claude SDK generation error:', error);

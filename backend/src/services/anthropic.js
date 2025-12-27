@@ -151,7 +151,15 @@ Generate the scene content now. Respond ONLY with valid JSON.`;
       messages: [{ role: 'user', content: userPrompt }]
     });
 
-    return this.parseSceneContent(result.content[0].text);
+    const parsed = this.parseSceneContent(result.content[0].text);
+
+    // Include token usage and model info from the API response
+    return {
+      ...parsed,
+      model: result.model || this.model,
+      inputTokens: result.usage?.input_tokens || 0,
+      outputTokens: result.usage?.output_tokens || 0
+    };
   }
 
   /**

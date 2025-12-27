@@ -14,6 +14,7 @@ const { getAvailableTTSProviders, getAllVoices, generateSpeech } = require('../s
 const elevenlabsService = require('../services/elevenlabs');
 const storage = require('../services/storage');
 const { createUsageService } = require('../services/usage');
+const pricingService = require('../services/pricing');
 
 /**
  * GET /api/generation/providers
@@ -124,14 +125,21 @@ router.post('/projects/:id/scenes/:sceneId/generate-content', async (req, res, n
       }
     });
 
-    // Record LLM usage
+    // Record LLM usage with cost
     const usageService = createUsageService(prisma);
+    const llmCost = pricingService.calculateLLMCost(
+      providerName,
+      generatedContent.model || 'default',
+      generatedContent.inputTokens || 0,
+      generatedContent.outputTokens || 0
+    );
     await usageService.recordLLMUsage(req.user.id, {
       provider: providerName,
       model: generatedContent.model || 'default',
       operation: 'generate-scene-content',
       inputTokens: generatedContent.inputTokens,
       outputTokens: generatedContent.outputTokens,
+      cost: llmCost,
       metadata: { projectId: req.params.id, sceneId: req.params.sceneId }
     });
 
@@ -363,14 +371,16 @@ router.post('/projects/:id/scenes/:sceneId/generate-images', async (req, res, ne
       });
     }
 
-    // Record image usage
+    // Record image usage with cost
     const imagesGenerated = (tasks.startImageUrl ? 1 : 0) + (tasks.endImageUrl ? 1 : 0);
     if (imagesGenerated > 0) {
       const usageService = createUsageService(prisma);
+      const imageCost = pricingService.calculateImageCost(providerName, imagesGenerated);
       await usageService.recordImageUsage(req.user.id, {
         provider: providerName,
         operation: 'generate-scene-images',
         count: imagesGenerated,
+        cost: imageCost,
         metadata: { projectId: req.params.id, sceneId: req.params.sceneId }
       });
     }
@@ -824,13 +834,16 @@ router.post('/projects/:id/scenes/:sceneId/generate-audio', async (req, res, nex
         });
       }
 
-      // Record audio/TTS usage
+      // Record audio/TTS usage with cost
       const usageService = createUsageService(prisma);
+      const characterCount = scene.dialogue?.length || 0;
+      const ttsCost = pricingService.calculateTTSCost(provider, characterCount);
       await usageService.recordTTSUsage(req.user.id, {
         provider,
         operation: 'generate-scene-audio',
         durationSeconds: result.durationSeconds || Math.ceil(scene.dialogue.length / 15), // Estimate ~15 chars/sec
-        metadata: { projectId: req.params.id, sceneId: req.params.sceneId, voiceId: voice }
+        cost: ttsCost,
+        metadata: { projectId: req.params.id, sceneId: req.params.sceneId, voiceId: voice, characterCount }
       });
 
       res.json({
@@ -1291,13 +1304,15 @@ router.post('/projects/:id/scenes/:sceneId/generate-video', async (req, res, nex
       });
     }
 
-    // Record video generation usage (pending - will complete when video is ready)
+    // Record video generation usage with cost
     const usageService = createUsageService(prisma);
+    const videoCost = pricingService.calculateVideoCost('piapi', mode, 1);
     await usageService.recordVideoUsage(req.user.id, {
       provider: 'piapi',
       operation: 'generate-scene-video',
       count: 1,
-      metadata: { projectId: req.params.id, sceneId: req.params.sceneId, taskId, duration }
+      cost: videoCost,
+      metadata: { projectId: req.params.id, sceneId: req.params.sceneId, taskId, duration, mode }
     });
 
     res.json({
