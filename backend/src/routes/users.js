@@ -206,7 +206,7 @@ router.put('/preferences', async (req, res, next) => {
     // Note: PiAPI only supports video generation, not images
     const validLlmProviders = ['anthropic', 'modal', 'claude-sdk'];
     const validImageProviders = ['kling', 'nanobanana', 'modal'];
-    const validVoiceProviders = ['elevenlabs', 'modal-chatterbox', 'modal-coqui'];
+    const validVoiceProviders = ['elevenlabs', 'modal-f5tts', 'modal-chatterbox', 'modal-coqui'];
 
     if (defaultLlmProvider && !validLlmProviders.includes(defaultLlmProvider)) {
       return res.status(400).json({ error: 'Invalid LLM provider' });

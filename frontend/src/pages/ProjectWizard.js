@@ -140,13 +140,14 @@ export default function ProjectWizard() {
       const prefs = response.data.preferences;
       setUserPreferences(prefs);
 
-      // Update formData with user's default providers (only for new projects)
-      if (!isEditing && !loadWizardState(null)?.formData) {
+      // Always update formData with user's default providers from settings
+      // This ensures the user's current settings are reflected
+      if (prefs) {
         setFormData(prev => ({
           ...prev,
-          llmProvider: prefs.defaultLlmProvider || 'anthropic',
-          imageProvider: prefs.defaultImageProvider || 'kling',
-          voiceProvider: prefs.defaultVoiceProvider || 'elevenlabs'
+          llmProvider: prefs.defaultLlmProvider || prev.llmProvider || 'anthropic',
+          imageProvider: prefs.defaultImageProvider || prev.imageProvider || 'kling',
+          voiceProvider: prefs.defaultVoiceProvider || prev.voiceProvider || 'elevenlabs'
         }));
       }
     } catch (error) {
