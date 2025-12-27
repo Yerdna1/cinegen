@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { FilmIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -42,85 +43,201 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-center text-primary-800">CineGen</h1>
-          <h2 className="mt-6 text-center text-2xl font-semibold text-gray-900">
-            Sign in to your account
-          </h2>
+    <div className="min-h-screen bg-cinema-void text-cream-50 relative overflow-hidden">
+      {/* Film grain overlay */}
+      <div className="fixed inset-0 bg-noise opacity-[0.015] pointer-events-none mix-blend-overlay z-50" />
+
+      {/* Background gradient */}
+      <div className="fixed inset-0 opacity-20 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-radial from-amber-500/20 via-transparent to-transparent" />
+      </div>
+
+      <div className="relative min-h-screen grid lg:grid-cols-2">
+        {/* Left: Branding & Visual */}
+        <div className="hidden lg:flex flex-col justify-between p-12 border-r border-cinema-border relative overflow-hidden">
+          {/* Background accent */}
+          <div className="absolute inset-0 bg-gradient-to-br from-cinema-dark to-cinema-surface opacity-50" />
+
+          {/* Content */}
+          <div className="relative z-10">
+            {/* Logo */}
+            <Link to="/" className="flex items-center space-x-3 group">
+              <div className="relative">
+                <FilmIcon className="w-10 h-10 text-amber-400 group-hover:text-amber-300 transition-colors" />
+                <div className="absolute inset-0 blur-lg bg-amber-400/30" />
+              </div>
+              <span className="text-3xl font-display font-bold bg-gradient-to-r from-amber-300 via-amber-400 to-rose-400 bg-clip-text text-transparent">
+                CineGen
+              </span>
+            </Link>
+          </div>
+
+          {/* Center content */}
+          <div className="relative z-10 space-y-6">
+            <h1 className="text-5xl font-display font-bold leading-tight">
+              <span className="block text-cream-50">Welcome Back to</span>
+              <span className="block bg-gradient-to-r from-amber-300 to-rose-400 bg-clip-text text-transparent">
+                Your Creative Studio
+              </span>
+            </h1>
+            <p className="text-lg text-cinema-subtle max-w-md">
+              Continue crafting cinematic stories with AI-powered video generation.
+            </p>
+
+            {/* Decorative film strip */}
+            <div className="flex items-center gap-2 pt-8">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-12 h-16 bg-cinema-surface border border-cinema-border rounded opacity-50"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom */}
+          <div className="relative z-10">
+            <p className="text-sm text-cinema-muted">
+              Trusted by 2,000+ creators worldwide
+            </p>
+          </div>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="you@example.com"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+        {/* Right: Login Form */}
+        <div className="flex items-center justify-center p-6 lg:p-12">
+          <div className="w-full max-w-md space-y-8">
+            {/* Mobile logo */}
+            <div className="lg:hidden text-center">
+              <Link to="/" className="inline-flex items-center space-x-3">
+                <FilmIcon className="w-8 h-8 text-amber-400" />
+                <span className="text-2xl font-display font-bold bg-gradient-to-r from-amber-300 to-rose-400 bg-clip-text text-transparent">
+                  CineGen
+                </span>
+              </Link>
+            </div>
+
+            {/* Header */}
+            <div className="space-y-2">
+              <h2 className="text-3xl font-display font-bold text-cream-50">
+                Sign In
+              </h2>
+              <p className="text-cinema-subtle">
+                Enter your credentials to access your account
+              </p>
+            </div>
+
+            {/* Form */}
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {/* Email */}
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-sm font-medium text-cream-50">
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`w-full px-4 py-3 bg-cinema-surface border rounded-xl text-cream-50 placeholder-cinema-muted focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all ${
+                    errors.email ? 'border-rose-500' : 'border-cinema-border'
+                  }`}
+                  placeholder="you@example.com"
+                />
+                {errors.email && (
+                  <p className="text-sm text-rose-400 flex items-center gap-1">
+                    {errors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-medium text-cream-50">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`w-full px-4 py-3 bg-cinema-surface border rounded-xl text-cream-50 placeholder-cinema-muted focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all ${
+                    errors.password ? 'border-rose-500' : 'border-cinema-border'
+                  }`}
+                  placeholder="••••••••"
+                />
+                {errors.password && (
+                  <p className="text-sm text-rose-400 flex items-center gap-1">
+                    {errors.password}
+                  </p>
+                )}
+              </div>
+
+              {/* Forgot password */}
+              <div className="flex items-center justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+
+              {/* Submit error */}
+              {errors.submit && (
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                  <p className="text-sm text-rose-400">{errors.submit}</p>
+                </div>
               )}
-            </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 ${
-                  errors.password ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-              )}
-            </div>
+              {/* Submit button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full px-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-cinema-black font-bold rounded-xl overflow-hidden shadow-glow hover:shadow-glow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {loading ? 'Signing in...' : 'Sign In'}
+                  {!loading && <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-cinema-border" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-cinema-void text-cinema-muted">or</span>
+                </div>
+              </div>
+
+              {/* Sign up link */}
+              <div className="text-center">
+                <p className="text-sm text-cinema-subtle">
+                  Don't have an account?{' '}
+                  <Link
+                    to="/register"
+                    className="font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+                  >
+                    Create one now
+                  </Link>
+                </p>
+              </div>
+
+              {/* Back to home */}
+              <div className="text-center pt-4">
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-2 text-sm text-cinema-muted hover:text-cream-50 transition-colors"
+                >
+                  ← Back to home
+                </Link>
+              </div>
+            </form>
           </div>
-
-          <div className="flex items-center justify-end">
-            <Link
-              to="/forgot-password"
-              className="text-sm font-medium text-primary-600 hover:text-primary-500"
-            >
-              Forgot your password?
-            </Link>
-          </div>
-
-          {errors.submit && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{errors.submit}</p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
-
-          <p className="text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-              Sign up
-            </Link>
-          </p>
-        </form>
+        </div>
       </div>
     </div>
   );
