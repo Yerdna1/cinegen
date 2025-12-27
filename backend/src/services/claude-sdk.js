@@ -1,0 +1,218 @@
+/**
+ * Claude Agent SDK Service
+ *
+ * Uses the official Claude Agent SDK with OAuth token authentication.
+ * This allows using your Claude subscription (via CLAUDE_CODE_OAUTH_TOKEN)
+ * instead of separate API credits.
+ *
+ * Based on the Python autonomous agent implementation.
+ */
+
+const { query } = require('@anthropic-ai/claude-agent-sdk');
+
+class ClaudeSDKService {
+  constructor() {
+    // Check for OAuth token or API key
+    this.oauthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN;
+    this.apiKey = process.env.ANTHROPIC_API_KEY;
+    this.model = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929';
+  }
+
+  /**
+   * Get user's API key - for Claude SDK, we use the OAuth token from environment
+   * This maintains compatibility with the LLM factory interface
+   * @param {object} prisma - Prisma client (not used for SDK auth)
+   * @param {string} userId - User ID (not used for SDK auth)
+   * @returns {string|null} The OAuth token or API key
+   */
+  async getUserApiKey(prisma, userId) {
+    // Claude SDK uses environment-based auth (OAuth token or API key)
+    // Return a marker that auth is available
+    if (this.oauthToken || this.apiKey) {
+      return 'sdk-auth-available';
+    }
+    return null;
+  }
+
+  /**
+   * Generate scene content using Claude Agent SDK
+   * @param {string} _apiKey - Ignored (SDK uses env-based auth)
+   * @param {object} sceneContext - Current scene details
+   * @param {object} projectContext - Project-level context
+   */
+  async generateSceneContent(_apiKey, sceneContext, projectContext) {
+    const prompt = this.buildScenePrompt(sceneContext, projectContext);
+
+    try {
+      let result = null;
+
+      for await (const message of query({
+        prompt,
+        options: {
+          model: this.model,
+          maxTurns: 1, // Single turn for content generation
+          systemPrompt: this.getSystemPrompt()
+        }
+      })) {
+        if (message.type === 'result') {
+          result = message.result;
+          break;
+        }
+      }
+
+      if (result) {
+        return this.parseSceneContent(result);
+      }
+
+      // Fallback if no result
+      return {
+        dialogue: '',
+        startImagePrompt: '',
+        endImagePrompt: '',
+        emotions: '',
+        actions: ''
+      };
+    } catch (error) {
+      console.error('Claude SDK generation error:', error);
+      throw new Error(`Claude SDK error: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get system prompt for scene generation
+   */
+  getSystemPrompt() {
+    return `You are a professional cinematic scene writer and visual storyteller. Your task is to generate dialogue and detailed image prompts for movie scenes.
+
+For each scene, you must generate:
+1. DIALOGUE: Natural, engaging dialogue that fits the characters and scene context
+2. START_IMAGE_PROMPT: A detailed prompt describing the FIRST frame of the scene
+3. END_IMAGE_PROMPT: A detailed prompt describing the LAST frame of the scene
+
+CRITICAL REQUIREMENTS:
+- Image prompts must be visually consistent with each other (same characters, lighting, style)
+- Include specific details: character positions, expressions, camera angle, lighting, environment
+- Prompts should be suitable for AI image generation (detailed, descriptive, no ambiguity)
+- The start and end frames should show clear progression within the scene
+- Maintain visual continuity with the project's established style
+
+OUTPUT FORMAT (JSON only, no other text):
+{
+  "dialogue": "Character dialogue for this scene",
+  "startImagePrompt": "Detailed description of the first frame...",
+  "endImagePrompt": "Detailed description of the last frame...",
+  "emotions": "Primary emotions in this scene (comma-separated)",
+  "actions": "Key actions happening (comma-separated)"
+}`;
+  }
+
+  /**
+   * Build the prompt for scene generation
+   */
+  buildScenePrompt(sceneContext, projectContext) {
+    const characterDescriptions = projectContext.characters
+      .map(c => `- ${c.name}: ${c.description || 'No description'}`)
+      .join('\n');
+
+    const previousContext = projectContext.previousScenes
+      .map((s, i) => `Scene ${i + 1}: ${s.dialogue || 'No dialogue'} [${s.actions || 'No actions'}]`)
+      .join('\n');
+
+    return `Generate content for Scene ${sceneContext.sequenceNumber} of ${projectContext.totalScenes}.
+
+PROJECT DETAILS:
+- Genre: ${projectContext.genre || 'Not specified'}
+- Setting: ${projectContext.setting || 'Not specified'}
+- Plot: ${projectContext.plot || 'Not specified'}
+
+CHARACTERS:
+${characterDescriptions || 'No characters defined'}
+
+PREVIOUS SCENES:
+${previousContext || 'This is the first scene'}
+
+CURRENT SCENE CONTEXT:
+- Scene Number: ${sceneContext.sequenceNumber}
+- Camera Angle: ${sceneContext.cameraAngle || 'medium shot'}
+- Suggested Emotions: ${sceneContext.emotions || 'neutral'}
+- Suggested Actions: ${sceneContext.actions || 'standing'}
+
+Generate the scene content now. Respond ONLY with valid JSON.`;
+  }
+
+  /**
+   * Parse the SDK response into structured scene content
+   */
+  parseSceneContent(responseText) {
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          dialogue: parsed.dialogue || '',
+          startImagePrompt: parsed.startImagePrompt || parsed.start_image_prompt || '',
+          endImagePrompt: parsed.endImagePrompt || parsed.end_image_prompt || '',
+          emotions: parsed.emotions || '',
+          actions: parsed.actions || ''
+        };
+      }
+    } catch (error) {
+      console.error('Failed to parse scene content from Claude SDK:', error);
+    }
+
+    // Fallback: return empty content
+    return {
+      dialogue: '',
+      startImagePrompt: '',
+      endImagePrompt: '',
+      emotions: '',
+      actions: ''
+    };
+  }
+
+  /**
+   * Test SDK connection
+   */
+  async testConnection() {
+    try {
+      if (!this.oauthToken && !this.apiKey) {
+        return {
+          success: false,
+          message: 'Missing CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY',
+          hasAuth: false
+        };
+      }
+
+      // Quick test query
+      let success = false;
+      for await (const message of query({
+        prompt: 'Say "ok"',
+        options: {
+          model: this.model,
+          maxTurns: 1
+        }
+      })) {
+        if (message.type === 'result') {
+          success = true;
+          break;
+        }
+      }
+
+      return {
+        success,
+        message: success ? 'Claude SDK connected via OAuth' : 'SDK query failed',
+        hasAuth: true,
+        authType: this.oauthToken ? 'oauth' : 'apikey'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        hasAuth: !!(this.oauthToken || this.apiKey)
+      };
+    }
+  }
+}
+
+module.exports = new ClaudeSDKService();
