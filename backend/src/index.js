@@ -86,8 +86,9 @@ app.set('broadcastProgress', (projectId, data) => {
 });
 
 // Middleware
+const corsOrigin = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/[\r\n]/g, '');
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: corsOrigin,
   credentials: true
 }));
 app.use(express.json());
