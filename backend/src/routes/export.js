@@ -323,15 +323,77 @@ router.post('/projects/:id/export-capcut', async (req, res, next) => {
       });
     }
 
-    // TODO: Implement CapCut project file generation
-    // CapCut uses a JSON-based project format that references media files
-    // Structure would include timeline, tracks, clips, transitions, effects
+    // Generate CapCut Draft JSON format
+    const materials = {
+      videos: project.scenes.map((scene, index) => ({
+        id: `video_${scene.id}`,
+        path: scene.videoUrl,
+        type: "video",
+        duration: 6000000, // 6 seconds in microseconds (default scene duration)
+        width: 1920,
+        height: 1080,
+        material_name: `Scene ${scene.sequenceNumber}`,
+        create_time: Date.now()
+      })),
+      audios: [],
+      texts: []
+    };
 
-    res.json({
-      success: true,
-      message: 'CapCut export coming soon. Use "Download Scenes" to get individual files.',
-      downloadUrl: null
-    });
+    // Build timeline tracks
+    let currentTime = 0;
+    const videoTrack = {
+      type: "video",
+      segments: project.scenes.map((scene, index) => {
+        const segment = {
+          id: `segment_${scene.id}`,
+          material_id: `video_${scene.id}`,
+          target_timerange: {
+            start: currentTime,
+            duration: 6000000 // 6 seconds
+          },
+          source_timerange: {
+            start: 0,
+            duration: 6000000
+          }
+        };
+        currentTime += 6000000;
+        return segment;
+      })
+    };
+
+    // Add title card if requested
+    if (settings?.addTitleCard && settings?.titleText) {
+      materials.texts.push({
+        id: "title_text",
+        content: settings.titleText,
+        font_size: 72,
+        align: "center",
+        color: "#FFFFFF"
+      });
+    }
+
+    const capcutProject = {
+      version: "5.9.0",
+      draft_materials: materials,
+      tracks: [videoTrack],
+      duration: currentTime,
+      canvas: {
+        width: 1920,
+        height: 1080
+      },
+      config: {
+        fps: 30
+      }
+    };
+
+    // Generate filename
+    const filename = `${project.name.replace(/[^a-z0-9]/gi, '_')}_capcut_project.json`;
+
+    // Return JSON for download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.json(capcutProject);
+
   } catch (error) {
     console.error('CapCut export error:', error);
     next(error);

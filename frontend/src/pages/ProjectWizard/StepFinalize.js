@@ -91,15 +91,26 @@ export default function StepFinalize({ projectId, scenes }) {
     try {
       const response = await api.post(`/export/projects/${projectId}/export-capcut`, {
         settings
+      }, {
+        responseType: 'blob' // Important for file download
       });
 
-      if (response.data.downloadUrl) {
-        // Download CapCut project file
-        window.open(response.data.downloadUrl, '_blank');
-        toast.success('CapCut project exported!');
-      } else {
-        toast.info(response.data.message || 'CapCut export feature coming soon');
-      }
+      // Create a blob from the response
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `capcut_project_${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('CapCut project file downloaded! Import this JSON file into CapCut.');
     } catch (error) {
       console.error('CapCut export error:', error);
       toast.error(error.response?.data?.error || 'Failed to export to CapCut');
