@@ -311,6 +311,127 @@ Respond with ONLY the video prompt text, no JSON or extra formatting.`;
   }
 
   /**
+   * Generate project idea with genre, setting, plot, and duration
+   * @param {string} seedIdea - Optional user input to guide generation (can be empty)
+   * @returns {object} Generated project details
+   */
+  async generateProjectIdea(seedIdea = '') {
+    const queryFn = getQuery();
+    if (!queryFn) {
+      // Return default idea when SDK not available
+      return {
+        genre: 'Drama',
+        setting: 'Modern city',
+        plot: 'A compelling story about everyday life',
+        durationSeconds: 60
+      };
+    }
+
+    const prompt = seedIdea
+      ? `Generate a creative video project idea based on this concept: "${seedIdea}"
+
+Create a short video project with:
+- Genre (e.g., Action, Drama, Comedy, Horror, Sci-Fi, Romance, Thriller, Documentary)
+- Setting (time period and location)
+- Plot (2-3 sentence compelling story)
+- Duration in seconds (recommended 30-120 seconds for short videos)
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "genre": "Genre name",
+  "setting": "Setting description",
+  "plot": "Plot description",
+  "durationSeconds": 60
+}`
+      : `Generate a creative and unique video project idea.
+
+Create a short video project with:
+- Genre (e.g., Action, Drama, Comedy, Horror, Sci-Fi, Romance, Thriller, Documentary)
+- Setting (time period and location)
+- Plot (2-3 sentence compelling story)
+- Duration in seconds (recommended 30-120 seconds for short videos)
+
+Be creative and original. Think of interesting character conflicts, unusual settings, or compelling scenarios.
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "genre": "Genre name",
+  "setting": "Setting description",
+  "plot": "Plot description",
+  "durationSeconds": 60
+}`;
+
+    try {
+      let result = null;
+
+      for await (const message of queryFn({
+        prompt,
+        options: {
+          model: this.model,
+          maxTurns: 1,
+          systemPrompt: 'You are a creative film producer and storyteller. Generate compelling, original video project ideas. Output only valid JSON, no other text.'
+        }
+      })) {
+        if (message.type === 'result') {
+          result = message.result;
+          break;
+        }
+      }
+
+      if (result) {
+        // Parse the JSON response
+        const parsed = this.parseProjectIdea(result);
+        return parsed;
+      }
+
+      // Fallback
+      return {
+        genre: 'Drama',
+        setting: 'Modern city',
+        plot: 'A compelling story about everyday life',
+        durationSeconds: 60
+      };
+    } catch (error) {
+      console.error('Claude SDK project idea generation error:', error);
+      return {
+        genre: 'Drama',
+        setting: 'Modern city',
+        plot: 'A compelling story about everyday life',
+        durationSeconds: 60
+      };
+    }
+  }
+
+  /**
+   * Parse project idea JSON response
+   */
+  parseProjectIdea(responseText) {
+    try {
+      // Extract JSON from response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          genre: parsed.genre || 'Drama',
+          setting: parsed.setting || 'Modern setting',
+          plot: parsed.plot || 'An interesting story',
+          durationSeconds: parsed.durationSeconds || parsed.duration_seconds || 60
+        };
+      }
+    } catch (error) {
+      console.error('Failed to parse project idea:', error);
+    }
+
+    // Fallback
+    return {
+      genre: 'Drama',
+      setting: 'Modern city',
+      plot: 'A compelling story about everyday life',
+      durationSeconds: 60
+    };
+  }
+
+  /**
    * Test SDK connection
    */
   async testConnection() {

@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { SparklesIcon } from '@heroicons/react/24/outline';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
 
 export default function StepDuration({
   formData,
@@ -6,6 +9,7 @@ export default function StepDuration({
   validationErrors,
   setValidationErrors
 }) {
+  const [generatingIdea, setGeneratingIdea] = useState(false);
   const validateDuration = (value) => {
     if (value === '' || value === null || value === undefined) {
       return 'Duration is required';
@@ -23,8 +27,60 @@ export default function StepDuration({
     return null;
   };
 
+  const handleGenerateIdea = async () => {
+    setGeneratingIdea(true);
+    try {
+      const seedIdea = formData.name.trim();
+      const response = await api.post('/projects/generate-idea', {
+        seedIdea: seedIdea || undefined
+      });
+
+      if (response.data.success && response.data.idea) {
+        const { genre, setting, plot, durationSeconds } = response.data.idea;
+
+        // Prefill all the wizard fields
+        if (!formData.name.trim()) {
+          updateFormData('name', 'Generated Project');
+        }
+        updateFormData('durationSeconds', durationSeconds || 60);
+        updateFormData('genre', genre || '');
+        updateFormData('setting', setting || '');
+        updateFormData('plot', plot || '');
+
+        toast.success('Project idea generated! Continue to the next steps to customize it.');
+      }
+    } catch (error) {
+      console.error('Failed to generate idea:', error);
+      toast.error(error.response?.data?.error || 'Failed to generate project idea');
+    } finally {
+      setGeneratingIdea(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Generate Idea Button */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg border border-primary-200">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-primary-900 mb-1">
+              Need inspiration?
+            </h3>
+            <p className="text-xs text-primary-700">
+              Let Claude generate a creative project idea for you. You can provide a rough concept in the project name field, or leave it empty for a random idea.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateIdea}
+            disabled={generatingIdea}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            <SparklesIcon className={`w-4 h-4 ${generatingIdea ? 'animate-spin' : ''}`} />
+            {generatingIdea ? 'Generating...' : 'Generate Idea'}
+          </button>
+        </div>
+      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Project Name *</label>
         <input

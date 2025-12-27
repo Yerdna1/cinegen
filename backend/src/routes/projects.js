@@ -1,4 +1,5 @@
 const express = require('express');
+const claudeSDK = require('../services/claude-sdk');
 
 const router = express.Router();
 
@@ -213,6 +214,30 @@ router.delete('/:id', async (req, res, next) => {
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
     next(error);
+  }
+});
+
+// POST /api/projects/generate-idea
+router.post('/generate-idea', async (req, res, next) => {
+  try {
+    const prisma = req.app.get('prisma');
+    const { seedIdea } = req.body;
+
+    // Get user's Claude OAuth token or API key
+    await claudeSDK.getUserApiKey(prisma, req.user.id);
+
+    // Generate project idea using Claude SDK
+    const idea = await claudeSDK.generateProjectIdea(seedIdea || '');
+
+    res.json({
+      success: true,
+      idea
+    });
+  } catch (error) {
+    console.error('Project idea generation error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to generate project idea'
+    });
   }
 });
 
