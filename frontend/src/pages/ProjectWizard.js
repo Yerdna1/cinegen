@@ -431,11 +431,11 @@ export default function ProjectWizard() {
       }
     }
     await saveProject();
-    if (currentStep === 6) {
-      fetchVoices();
-    }
     if (currentStep === 5) {
       await generateScenes();
+      // Entering step 6 (Voices) - fetch voice providers and voices
+      fetchVoiceProviders();
+      fetchVoices();
     }
     setCurrentStep(prev => Math.min(prev + 1, 8));
   };
